@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Prints;
+
+use App\Helpers;
+use App\UseStock;
+use Illuminate\Contracts\View\View;
+
+class ProductStockPrint
+{
+    public function __construct()
+    {
+    }
+
+    public function options(): array
+    {
+        return [
+            'orientation' => 'P',
+            'default_font_size' => 10,
+            'margin_right' => 8,
+            'margin_left' => 8,
+        ];
+    }
+
+    public function view(): View
+    {
+        $product_name = Helpers::getSettingValueOf('product');
+
+        $params = [
+            'heading' => $product_name.' Stock '.now()->format('d/m/Y h:i A'),
+            'items' => UseStock::productsStock(),
+        ];
+
+        return view('reports.stock', $params);
+    }
+
+    public function headerView(): View
+    {
+        return view('reports.partials.header');
+    }
+}

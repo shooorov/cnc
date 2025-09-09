@@ -1,0 +1,7 @@
+
+@import "./components/tailwindcss-basic";
+
+// Border style in pdf not working by wild selecting in *
+.border {
+    border-style: solid;
+}

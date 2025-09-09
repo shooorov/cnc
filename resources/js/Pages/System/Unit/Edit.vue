@@ -1,0 +1,215 @@
+<template>
+    <Head title="Edit Unit" />
+
+    <div>
+        <div class="bg-white shadow">
+            <div class="px-4 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
+                <div class="py-6 md:flex md:items-center md:justify-between lg:border-t lg:border-gray-200">
+                    <div class="flex-1 min-w-0">
+                        <Breadcrumb :breadcrumbs="breadcrumbs" />
+                    </div>
+                    <div class="mt-6 h-9 flex space-x-3 md:mt-0 md:ml-4">
+                        <Link :href="route('unit.create')" class="inline-flex items-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-primary-400">
+                            <PlusIcon class="-ml-1 mr-2 h-5 w-5 text-gray-400" aria-hidden="true" />
+                            Create
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="py-5">
+            <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
+                <div class="bg-white shadow sm:rounded-lg">
+                    <div class="flex flex-col sm:flex-row sm:justify-between items-center px-4 py-5 border-b border-gray-200 sm:px-8">
+                        <p class="max-w-2xl leading-10 text-gray-700 text-lg font-medium mb-4 sm:mb-0">Unit Edit</p>
+
+                        <div class="flex-shrink-0 flex space-x-3">
+                        </div>
+                    </div>
+
+                    <Alert />
+
+                    <form @submit.prevent="submit">
+                        <dl class="space-y-4 sm:space-y-6 px-5 py-6">
+
+                            <div class="max-w-xl mx-auto">
+                                <div class="grid grid-cols-6 gap-6">
+
+                                    <div class="col-span-6 sm:col-span-3">
+                                        <label class="block text-sm font-medium text-gray-700"> Name <span class="text-red-500">*</span> </label>
+                                        <input v-model="form.name" type="text" class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded">
+                                        <InputError :message="$page.props.errors.name" />
+                                    </div>
+
+                                    <div class="col-span-6 sm:col-span-3">
+                                        <label class="block text-sm font-medium text-gray-700"> Short <span class="text-red-500">*</span> </label>
+                                        <input v-model="form.short" type="text" class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded">
+                                        <InputError :message="$page.props.errors.short" />
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <div class="relative">
+                                <div class="absolute inset-0 flex items-center" aria-hidden="true"> <div class="w-full border-t border-gray-300" /> </div>
+                                <div class="relative flex justify-start ml-4"> <span class="px-3 bg-white text-lg font-medium text-gray-900"> Conversions </span> </div>
+                            </div>
+
+                            <div class="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+                                <table class="table-auto sm:table-fixed min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                                            <th scope="col" class="w-40 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factor</th>
+                                            <th scope="col" class="w-64 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                                            <th scope="col" class="w-6 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr v-for="(group_item, index) in form.group_items" :key="index">
+                                            <td class="whitespace-nowrap text-xs text-gray-700">
+                                                <div class="text-sm leading-5 text-right text-gray-700"> 1 {{ unit.name }} </div>
+                                            </td>
+
+                                            <td class="whitespace-nowrap text-xs text-gray-700">
+                                                <div class="text-3xl leading-5 text-center text-gray-700"> = </div>
+                                            </td>
+
+                                            <td class="whitespace-nowrap text-xs text-gray-700">
+                                                <input v-model="group_item.factor" placeholder="Factor" type="text" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');" autocomplete="off" class="block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded">
+                                            </td>
+
+                                            <td class="whitespace-nowrap text-xs text-gray-700">
+                                                <Combobox class="mt-1" v-model="group_item.to_unit_id" :items="units" />
+                                            </td>
+
+                                            <td class="whitespace-nowrap text-xs text-gray-700">
+                                                <button v-show="form.group_items.length > 1" @click="removeItem(index), calculation()" type="button" class="p-1 border border-transparent rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                                    <XMarkIcon class="h-4 w-4" aria-hidden="true" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+
+                                    <tfoot class="bg-white">
+                                        <tr>
+                                            <th colspan="4" class="text-left pt-3">
+                                                <button @click="addItem()" type="button" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                                    Add Item
+                                                    <PlusIcon class="ml-2 -mr-0.5 h-4 w-4" aria-hidden="true" />
+                                                </button>
+                                            </th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <div class="relative">
+                                <div class="absolute inset-0 flex items-center" aria-hidden="true"> <div class="w-full border-t border-gray-300" /> </div>
+                                <div class="relative flex justify-start ml-4"> <span class="px-3 bg-white text-lg font-medium text-gray-900"> </span> </div>
+                            </div>
+
+                            <div class="max-w-xl mx-auto">
+                                <div class="flex justify-end">
+                                    <button type="submit" class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                        <PencilSquareIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                                        Update
+                                    </button>
+                                </div>
+                            </div>
+                        </dl>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</template>
+
+<script>
+import { reactive } from 'vue';
+import { router, Head, Link } from '@inertiajs/vue3';
+
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Breadcrumb from '@/Components/Breadcrumb.vue';
+import Alert from '@/Components/Alert.vue';
+import InputError from '@/Components/InputError.vue';
+import Combobox from '@/Components/Combobox.vue';
+
+import {
+    PlusIcon,
+    XMarkIcon,
+    ArrowPathIcon,
+} from '@heroicons/vue/24/solid';
+
+import {
+    PencilSquareIcon,
+} from '@heroicons/vue/24/outline';
+
+export default {
+    layout: AuthenticatedLayout,
+
+    components: {
+        Alert,
+        Breadcrumb,
+        Combobox,
+        Head,
+        InputError,
+        Link,
+        PlusIcon,
+        PencilSquareIcon,
+        XMarkIcon,
+        ArrowPathIcon,
+    },
+    props: {
+
+        units: Array,
+        unit: Object,
+    },
+
+    methods: {
+        removeItem(index){
+            if (confirm('Are you sure you want to delete this element?')) {
+                this.form.group_items.splice(index, 1);
+            }
+        },
+
+        addItem(){
+            this.form.group_items.push({
+                factor: '',
+                unit_id: '',
+            });
+        }
+    },
+
+    setup (props) {
+        const breadcrumbs = [
+            { name: 'Units', href: route('unit.index'), current: false },
+            { name: 'Edit Page', href: '#', current: false },
+        ]
+
+        const form = reactive({
+            name: props.unit.name,
+            short: props.unit.short,
+            group_items: props.unit.conversions.length ? props.unit.conversions : [{
+                factor: '',
+                to_unit_id: '',
+            }]
+        })
+
+        function submit() {
+            router.patch(route('unit.update', props.unit.id), form)
+        }
+
+        return {
+            breadcrumbs,
+            form,
+            submit
+        }
+    },
+}
+</script>

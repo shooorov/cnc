@@ -1,0 +1,986 @@
+<?php
+
+namespace App\Http\Controllers\Operation;
+
+use App\Data;
+use App\Events\OrderModified;
+use App\Events\OrderPlaced;
+use App\Helpers;
+use App\Http\Cache\CacheBranchAccess;
+use App\Http\Cache\CacheCustomer;
+use App\Http\Cache\CacheCustomerOrder;
+use App\Http\Cache\CacheOrder;
+use App\Http\Cache\CacheOrderProduct;
+use App\Http\Cache\CacheOrderProductQuantity;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\OrderRequest;
+use App\Models\Customer;
+use App\Models\Order;
+use App\Models\OrderHistory;
+use App\Models\OrderPaymentMethod;
+use App\Models\OrderProduct;
+use App\Models\Stuff;
+use App\Models\User;
+use App\RolePermission;
+use App\UseBranch;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+use Psy\Readline\Hoa\Console;
+
+class POSController extends Controller
+{
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /**
+     * Show the Order create.
+     *
+     * @return \Illuminate\Contracts\Support\Renderable
+     */
+
+    
+    public function create(Request $request, Order $order)
+    {
+        $end_date = Helpers::dayEndedAt();
+        $start_date = Helpers::dayStartedAt();
+
+        $vat_rate = UseBranch::take('vat_rate') ?? 5;
+
+        $pending_orders = Data::whereBranch(UseBranch::id())->whereBetween($start_date, $end_date)->pendingOrders();
+
+        $branch_id = UseBranch::id();
+        $tables = Stuff::all();
+
+        $discountTypes = collect($order->discount_types);
+
+        $dineTypes = collect([
+            ['id' => 'dine-in',     'name' => 'Dine In'],
+            ['id' => 'take-away',   'name' => 'Take Away'],
+        ]);
+
+        if (config('module.delivery')) {
+            $dineTypes->push([
+                'id' => 'delivery',   'name' => 'Delivery',
+            ]);
+        }
+
+        $statuses = collect($order->statuses)->map(function ($status, $index) {
+            return [
+                'id' => $index,
+                'name' => $status,
+            ];
+        })->values()->toArray();
+
+        $branch_users = CacheBranchAccess::get()->filter(fn ($item) => $item->branch_id == $branch_id && $item->is_checked)->pluck('user_id');
+        // $waiters = User::whereIsWaiter(true)->whereIn('id', $branch_users->toArray())->get();
+        $waiters = User::where('status', 'active')
+               ->whereIsWaiter(true)
+               ->whereIn('id', $branch_users->toArray())
+               ->get();
+
+        $params = [
+            'vat_rate' => $vat_rate,
+            'tables' => $tables,
+            'waiters' => $waiters,
+            'pending_orders' => $pending_orders,
+            'order' => $order,
+            'dineTypes' => $dineTypes,
+            'discountTypes' => $discountTypes,
+            'statuses' => $statuses,
+            'bill_print' => RolePermission::isEnabled('POS.print_order_before_bill_paid'),
+        ];
+        // dd($params);
+        // die();
+
+        return Inertia::render('Operation/POS', $params);
+    }
+
+    /**
+     * Create new resource in storage.
+     *
+     * @return Response
+     */
+    public function store(OrderRequest $request)
+    {
+        // dd($request->all());
+
+        DB::beginTransaction();
+        $update = false;
+        
+        if ($request->order_id) {
+            $order = Order::findOrFail($request->order_id);
+            $update = true;
+        } else {
+            $order = new Order;
+
+            // $order->number = Order::withTrashed()->count() + 1;
+            // $order->invoice_number = now()->format('ymd').$order->number;
+            // $order->branch_id = UseBranch::id();
+            // $order->creator_id = $request->user()->id;
+
+
+
+
+             // Fetch branch ID from the currently logged-in user's branch or request
+             $branchId = UseBranch::id();
+
+             // Calculate daily branch-based order count
+             $dayStartTime = Helpers::dayStartedAt(); // Helper method to fetch the start of the current "day"
+             $lastOrder = Order::where('branch_id', $branchId)
+                 ->where('created_at', '>=', $dayStartTime)
+                 ->latest('created_at')
+                 ->first();
+ 
+             if ($lastOrder) {
+                 // Increment order count if the branch has existing orders for the current day
+                 $order->order_count = $lastOrder->order_count + 1;
+             } else {
+                 // Reset the order count for a new day
+                 $order->order_count = 1;
+             }
+ 
+             $order->number = $order->order_count;
+             $order->invoice_number = now()->format('ymd') . $order->number;
+             $order->branch_id = $branchId;
+             $order->creator_id = $request->user()->id;
+        }
+
+        $customer = null;
+        if ($request->customer_mobile) {
+            $customer = Customer::updateOrCreate(
+                ['mobile' => $request->customer_mobile],
+                ['name' => $request->customer_name ?? '']
+            );
+            CacheCustomer::forget();
+        }
+        // This values store modifying history
+        $current_status = $order->status;
+        $current_total = $order->total;
+        $modified_total = $request->total;
+
+        $messages = [];
+
+        $order->date = $request->date_time ? now()->parse($request->date_time) : now();
+        $order->sub_total = $request->sub_total;
+        $order->dine_type = $request->dine_type;
+        $order->guest_number = $request->guest_number ?? 1;
+        $order->note = $request->note;
+        $order->stuff_id = $request->table;
+        $order->discount_type = $request->discount_type;
+        $order->discount_rate = $request->discount_rate;
+        $order->discount_amount = $request->discount_amount;
+        $order->service_cost = $request->service_cost;
+        $order->vatable_amount = $request->vatable_amount;
+        $order->vat_rate = $request->vat_rate;
+        $order->vat_amount = $request->vat_amount;
+        $order->vat_add = $request->vat_add;
+        // $order->added_in_loyalty = $request->added_in_loyalty;
+        $order->total = $request->total;
+        $order->token = $request->token ?? 0;
+        $order->cash = $request->cash;
+        $order->change = $request->change;
+        $order->customer_id = $customer?->id;
+        $order->waiter_id = $request->waiter_id;
+        $order->member_code = $request->member_code;
+        $order->member_discount = $request->member_discount_rate;
+
+
+        //dd($request->added_in_loyalty);
+      
+        
+
+        //new for member details
+        //$order->member_code = $request->member_code ?? null;
+        // $order->member_name = $request->member_name ?? null;
+        // $order->member_expired = $request-> member_expired ?? null;
+        //$order->member_discount = $request->member_discount ?? null;
+        // If paid by cash or other payment method
+        if ($request->cash >= $request->total) {
+            $order->status = 'complete';
+            $order->manager_id = $request->user()->id;
+             
+
+        } elseif (! $order->order_delivery) {
+            $order->status = 'accept';
+        }
+        if (RolePermission::isEnabled('POS.update_completed_order') || $current_status != 'complete') {
+
+            if ($current_status == 'complete' && $current_total != $modified_total) {
+                //dd($order->status);
+
+                OrderHistory::create([
+                    'status' => $order->status,
+                    'sub_total' => $order->sub_total,
+                    'total' => $order->total,
+                    'discount_amount' => $order->discount_amount,
+                    'vat_amount' => $order->vat_amount,
+                    'user_id' => $request->user()->id,
+                    'order_id' => $order->id,
+                ]);
+            }
+
+            $messages[] = 'Order modified successfully';
+
+ 
+            $order->save();
+
+        // ----------------------------------------------------------------new api loyalty status
+        $customer_mobile = $request->customer_mobile;
+        $customer_name = $request->customer_name;
+        $customer_id = $this->getCustomerId($customer_mobile);
+        //dd($request->added_in_loyalty);
+        // Handle API for customer and services
+        if ($request->added_in_loyalty){
+            $this->handleExternalApi($request->customer_mobile, $request->customer_name, $request->total, $order->id, $order->invoice_number, $order->branch_id, $order->member_code);
+        }else{
+            //dd($request->customer_mobile);
+            if ($request->customer_mobile != '' || $request->customer_mobile != null){
+                //dd($request->customer_mobile);
+                $this->insertCustomer($request->customer_name,$request->customer_mobile);
+            }
+        }
+              
+        }
+
+       
+
+        $order_delivery = $order->order_delivery;
+        if ($order_delivery) {
+            $order_delivery->rider_id = $request->rider_id;
+            $order_delivery->save();
+            if ($order->status != $request->status) {
+                $order->status = $request->status;
+            }
+
+            $messages[] = 'Order delivery rider modified successfully';
+        }
+
+        if ($current_status != 'complete' || RolePermission::isEnabled('POS.update_completed_order_payment_methods')) {
+
+            $group_methods = is_array($request->group_methods) && count($request->group_methods) ? $request->group_methods : [];
+
+            OrderPaymentMethod::where('order_id', $order->id)->delete();
+
+            foreach ($group_methods as $group_method) {
+                if (isset($group_method['amount']) && $group_method['amount'] > 0) {
+                    OrderPaymentMethod::create([
+                        'order_id' => $order->id,
+                        'payment_method_id' => $group_method['payment_method_id'],
+                        'amount' => $group_method['amount'],
+                    ]);
+                }
+            }
+
+            $messages[] = 'Order payment method modified successfully';
+        }
+
+        if (RolePermission::isEnabled('POS.update_completed_order_foods') || $current_status != 'complete') {
+
+            // $previous_items = $order->products->pluck('id')->toArray();
+            $group_items = is_array($request->group_items) && count($request->group_items) ? $request->group_items : [];
+
+            // $previous_items = $order->products->pluck('id')->toArray();
+            // $update_iteme = [];
+            // foreach ($group_items as $item) {
+            //     $order_product_id = $item['id'];
+            //     $product_id = $item['product_id'];
+            //     $quantity = intval($item['quantity']);
+            //     $rate = floatval($item['rate']);
+            //     $total = $quantity * $rate;
+
+            //     if ($quantity == 0) {
+            //         continue;
+            //     }
+
+            //     if (($key = array_search($order_product_id, $previous_items)) !== false) {
+            //         unset($previous_items[$key]);
+            //     }
+
+            //     OrderProduct::updateOrCreate(
+            //         [
+            //             'order_id' => $order->id,
+            //             'product_id' => $product_id,
+            //         ],
+            //         [
+            //             'rate' => $rate,
+            //             'quantity' => $quantity,
+            //             'total' => $total,
+            //         ]
+            //     );
+                
+            // }
+
+
+
+            $previous_items = $order->products->pluck('id')->toArray();
+            $updated_items = [];
+
+            // Iterate over the provided group items
+            foreach ($group_items as $item) {
+                $order_product_id = $item['id'] ?? null;
+                $product_id = $item['product_id'];
+                $quantity = intval($item['quantity']);
+                $rate = floatval($item['rate']);
+                $total = $quantity * $rate;
+
+                if ($quantity == 0) {
+                    continue; // Skip items with zero quantity
+                }
+
+                // Update or create the order product
+            $orderProduct = OrderProduct::updateOrCreate(
+                [
+                    'order_id' => $order->id,
+                    'product_id' => $product_id,
+                ],
+                [
+                    'rate' => $rate,
+                    'quantity' => $quantity,
+                    'total' => $total,
+                ]
+            );
+
+            // Add to updated items list
+            $updated_items[] = $orderProduct->id;
+        }
+
+            // Only delete products that were in the original order but not updated this time
+            OrderProduct::where('order_id', $order->id)
+                ->whereNotIn('id', $updated_items)
+                ->delete();
+
+
+            //OrderProduct::where('order_id', $order->id)->whereIn('id', $previous_items)->delete();
+
+            $messages[] = 'Order items modified successfully';
+        }
+
+        CacheOrder::forget();
+        CacheOrderProduct::forget();
+        CacheOrderProductQuantity::forget();
+        CacheCustomerOrder::forget();
+        CacheCustomer::forget();
+
+        DB::commit();
+
+        if ($update) {
+            OrderModified::dispatch($order);
+        } else {
+            OrderPlaced::dispatch($order);
+        }
+
+        $message = $update ? collect($messages)->reverse()->join('<br />') : 'Order created successfully.';
+
+        if (Auth::user()->is_waiter && ! $update) {
+            return redirect()->route('pos.create')->with('success', $message);
+        }
+
+        if ($update && empty($message)) {
+            return redirect()->route('pos.create', $order->id)->with('fail', 'Updating failed! Nothing updated!');
+        }
+
+        return redirect()->route('pos.create', $order->id)->with('success', $message);
+    }
+
+    public function store3(OrderRequest $request)
+{
+    DB::beginTransaction();
+    $update = false;
+
+    if ($request->order_id) {
+        $order = Order::findOrFail($request->order_id);
+        $update = true;
+    } else {
+        $order = new Order;
+
+        // Modify order number to be branch-specific
+        $branchId = UseBranch::id();
+        $orderCountForBranch = Order::withTrashed()->where('branch_id', $branchId)->count();
+        $order->number = $orderCountForBranch + 1;
+
+        $order->invoice_number = now()->format('ymd') . $order->number;
+        $order->branch_id = $branchId;
+        $order->creator_id = $request->user()->id;
+    }
+
+    // Existing customer handling logic
+    $customer = null;
+    if ($request->customer_mobile) {
+        $customer = Customer::updateOrCreate(
+            ['mobile' => $request->customer_mobile],
+            ['name' => $request->customer_name ?? '']
+        );
+        CacheCustomer::forget();
+    }
+
+    // Setting the remaining order attributes
+    $current_status = $order->status;
+    $current_total = $order->total;
+    $modified_total = $request->total;
+
+    $messages = [];
+
+    $order->date = $request->date_time ? now()->parse($request->date_time) : now();
+    $order->sub_total = $request->sub_total;
+    $order->dine_type = $request->dine_type;
+    $order->guest_number = $request->guest_number ?? 1;
+    $order->note = $request->note;
+    $order->stuff_id = $request->table;
+    $order->discount_type = $request->discount_type;
+    $order->discount_rate = $request->discount_rate;
+    $order->discount_amount = $request->discount_amount;
+    $order->service_cost = $request->service_cost;
+    $order->vatable_amount = $request->vatable_amount;
+    $order->vat_rate = $request->vat_rate;
+    $order->vat_amount = $request->vat_amount;
+    $order->vat_add = $request->vat_add;
+    $order->total = $request->total;
+    $order->token = $request->token ?? 0;
+    $order->cash = $request->cash;
+    $order->change = $request->change;
+    $order->customer_id = $customer?->id;
+    $order->waiter_id = $request->waiter_id;
+    $order->member_code = $request->member_code;
+    $order->member_discount = $request->member_discount_rate;
+
+    // Order status handling
+    if ($request->cash >= $request->total) {
+        $order->status = 'complete';
+        $order->manager_id = $request->user()->id;
+    } elseif (!$order->order_delivery) {
+        $order->status = 'accept';
+    }
+
+    // Modify and save the order
+    if (RolePermission::isEnabled('POS.update_completed_order') || $current_status != 'complete') {
+        if ($current_status == 'complete' && $current_total != $modified_total) {
+            OrderHistory::create([
+                'status' => $order->status,
+                'sub_total' => $order->sub_total,
+                'total' => $order->total,
+                'discount_amount' => $order->discount_amount,
+                'vat_amount' => $order->vat_amount,
+                'user_id' => $request->user()->id,
+                'order_id' => $order->id,
+            ]);
+        }
+
+        $messages[] = 'Order modified successfully';
+        $order->save();
+    }
+
+    // Handle payment methods, group items, caching, etc., as in the original code...
+
+    CacheOrder::forget();
+    CacheOrderProduct::forget();
+    CacheOrderProductQuantity::forget();
+    CacheCustomerOrder::forget();
+    CacheCustomer::forget();
+
+    DB::commit();
+
+    if ($update) {
+        OrderModified::dispatch($order);
+    } else {
+        OrderPlaced::dispatch($order);
+    }
+
+    $message = $update ? collect($messages)->reverse()->join('<br />') : 'Order created successfully.';
+
+    if (Auth::user()->is_waiter && !$update) {
+        return redirect()->route('pos.create')->with('success', $message);
+    }
+
+    if ($update && empty($message)) {
+        return redirect()->route('pos.create', $order->id)->with('fail', 'Updating failed! Nothing updated!');
+    }
+
+    return redirect()->route('pos.create', $order->id)->with('success', $message);
+}
+
+
+    public function print(Order $order)
+    {
+        $order->products;
+        $params = [
+            'order' => $order,
+        ];
+       
+        return Inertia::render('Operation/POSReceipt', $params);
+    }
+
+    public function store2(OrderRequest $request)
+{
+    DB::beginTransaction();
+    try {
+        $update = false;
+
+        if ($request->order_id) {
+            $order = Order::findOrFail($request->order_id);
+            $update = true;
+        } else {
+            $order = new Order();
+
+            // Fetch branch ID from the currently logged-in user's branch or request
+            $branchId = UseBranch::id();
+
+            // Calculate daily branch-based order count
+            $dayStartTime = Helpers::dayStartedAt(); // Helper method to fetch the start of the current "day"
+            $lastOrder = Order::where('branch_id', $branchId)
+                ->where('created_at', '>=', $dayStartTime)
+                ->latest('created_at')
+                ->first();
+
+            if ($lastOrder) {
+                // Increment order count if the branch has existing orders for the current day
+                $order->order_count = $lastOrder->order_count + 1;
+            } else {
+                // Reset the order count for a new day
+                $order->order_count = 1;
+            }
+
+            $order->number = $order->order_count;
+            $order->invoice_number = now()->format('ymd') . $order->number;
+            $order->branch_id = $branchId;
+            $order->creator_id = $request->user()->id;
+        }
+
+        $customer = null;
+        if ($request->customer_mobile) {
+            $customer = Customer::updateOrCreate(
+                ['mobile' => $request->customer_mobile],
+                ['name' => $request->customer_name ?? '']
+            );
+            CacheCustomer::forget();
+        }
+
+        // Store order details
+        $order->date = $request->date_time ? now()->parse($request->date_time) : now();
+        $order->sub_total = $request->sub_total;
+        $order->dine_type = $request->dine_type;
+        $order->guest_number = $request->guest_number ?? 1;
+        $order->note = $request->note;
+        $order->stuff_id = $request->table;
+        $order->discount_type = $request->discount_type;
+        $order->discount_rate = $request->discount_rate;
+        $order->discount_amount = $request->discount_amount;
+        $order->service_cost = $request->service_cost;
+        $order->vatable_amount = $request->vatable_amount;
+        $order->vat_rate = $request->vat_rate;
+        $order->vat_amount = $request->vat_amount;
+        $order->vat_add = $request->vat_add;
+        $order->total = $request->total;
+        $order->token = $request->token ?? 0;
+        $order->cash = $request->cash;
+        $order->change = $request->change;
+        $order->customer_id = $customer?->id;
+        $order->waiter_id = $request->waiter_id;
+        $order->member_code = $request->member_code;
+        $order->member_discount = $request->member_discount_rate;
+
+        // Update order status based on payment
+        if ($request->cash >= $request->total) {
+            $order->status = 'complete';
+            $order->manager_id = $request->user()->id;
+        } elseif (! $order->order_delivery) {
+            $order->status = 'accept';
+        }
+
+        $order->save();
+
+        // Handle API integration for loyalty programs
+        if ($request->added_in_loyalty) {
+            $this->handleExternalApi(
+                $request->customer_mobile,
+                $request->customer_name,
+                $request->total,
+                $order->id,
+                $order->invoice_number,
+                $order->branch_id,
+                $order->member_code
+            );
+        } else {
+            if (!empty($request->customer_mobile)) {
+                $this->insertCustomer($request->customer_name, $request->customer_mobile);
+            }
+        }
+
+        // Handle order products
+        if (!empty($request->group_items)) {
+            $groupItems = $request->group_items;
+            $existingProducts = $order->products->pluck('id')->toArray();
+            $updatedProducts = [];
+
+            foreach ($groupItems as $item) {
+                $orderProduct = OrderProduct::updateOrCreate(
+                    [
+                        'order_id' => $order->id,
+                        'product_id' => $item['product_id'],
+                    ],
+                    [
+                        'rate' => floatval($item['rate']),
+                        'quantity' => intval($item['quantity']),
+                        'total' => floatval($item['quantity']) * floatval($item['rate']),
+                    ]
+                );
+                $updatedProducts[] = $orderProduct->id;
+            }
+
+            // Remove products not in the updated list
+            OrderProduct::where('order_id', $order->id)
+                ->whereNotIn('id', $updatedProducts)
+                ->delete();
+        }
+
+        // Dispatch events and clear cache
+        CacheOrder::forget();
+        CacheOrderProduct::forget();
+        CacheOrderProductQuantity::forget();
+        CacheCustomerOrder::forget();
+        CacheCustomer::forget();
+
+        if ($update) {
+            OrderModified::dispatch($order);
+        } else {
+            OrderPlaced::dispatch($order);
+        }
+
+        DB::commit();
+
+        $message = $update ? 'Order updated successfully.' : 'Order created successfully.';
+        return redirect()->route('pos.create', $order->id)->with('success', $message);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return redirect()->back()->withErrors(['error' => $e->getMessage()]);
+    }
+}
+
+
+    public function printed(Request $request)
+    {
+        $order = Order::findOrFail($request->order_id);
+
+        $order->is_printed = true;
+        $order->save();
+        //dd($order);
+        return back();
+    }
+
+
+
+    protected function handleExternalApiold($customer_mobile, $customer_name, $total, $order_id, $invoice_number, $branch_id, $code)
+    {
+        
+
+        // Get the company name from the settings table where name = 'company_name'
+        $company_name = DB::table('settings')
+            ->where('name', 'company_name')
+            ->value('value'); // Assuming the column 'value' holds the company name
+        
+        // Get the branch name from the branches table using branch_id
+        $branch_name = DB::table('branches')
+            ->where('id', $branch_id)
+            ->value('name'); // Assuming the column 'name' holds the branch name
+
+        // Insert customer services to external API
+        $service_data = [
+            'service_name' => 'Loyalty Services',
+            'quantity' => 1,
+            'price' => $total,
+            'order_id' => $order_id,
+            'membership_code' => $code ?? '',
+            'invoice_number' => $invoice_number,
+            'buisness_name' => $company_name,  // The company name from the settings table
+            'branch_name' => $branch_name      // The branch name from the branch table
+        ];
+            // Get customer ID or create new customer in external system
+            $customer_id = $this->getCustomerId($customer_mobile);
+            if (!$customer_id) {
+                $customer_id = $this->insertCustomer($customer_name, $customer_mobile);
+                    //dd($customer_id);
+                $this->insertintoEligibility($customer_id,'1',$service_data);
+
+            }else{
+                $this->insertCustomerServices($customer_id, $service_data);
+
+            }
+
+
+    }
+    protected function getCustomerId($customer_mobile)
+    {
+        // Log the mobile number for debugging (optional)
+        Log::info('Fetching customer ID for mobile', ['mobile' => $customer_mobile]);
+    
+        // Define the API URL for retrieving the customer ID
+        //$url = 'http://localhost/marketing_bridge/api/get_customer_id.php'; // Replace with the actual API URL
+        $url = 'https://starbase.rocks/marketing_bridge/api/get_customer_id.php';
+
+        try {
+            // Send a GET request to the API with the customer mobile number as a query parameter
+            $response = Http::get($url, [
+                'phone' => $customer_mobile
+            ]);
+            //dd($response);
+    
+            // Log the API response (optional)
+            Log::info('API response', ['response' => $response->json()]);
+    
+            // Check if the response is successful
+            if ($response->successful()) {
+                $data = $response->json();
+                //dd($data);
+    
+                // Return the customer ID if it exists in the response data
+                return $data['id'] ?? null;
+            }
+    
+            // Handle cases where the response isn't successful (optional logging)
+            Log::error('Failed to fetch customer ID', ['response' => $response->body()]);
+        } catch (\Exception $e) {
+            // Handle any network or server-related exceptions
+            Log::error('Exception occurred while fetching customer ID', ['error' => $e->getMessage()]);
+        }
+    
+        // Return null if the API request fails or no ID is found
+        return null;
+    }
+    protected function insertCustomer($customer_name, $customer_mobile)
+    {
+        // Define the API URL for inserting a new customer
+        //$url = 'http://localhost/marketing_bridge/api/insert_customers.php'; // Replace with the actual API URL
+        $url = 'https://starbase.rocks/marketing_bridge/api/insert_customers.php';
+
+        // Prepare query parameters
+        $params = [
+            'name' => $customer_name,
+            'phone' => $customer_mobile,
+            'address' => null,
+            'email' => null
+        ];
+    
+        // Send a GET request with query parameters using Http::get
+        $response = Http::get($url, $params);
+    
+        // Debug the response if needed
+        //dd($response);
+    
+        // Check if the response is successful
+        if ($response->successful()) {
+            $data = $response->json();
+
+            
+            // Ensure the 'id' key exists in the response
+            if (isset($data['id'])) {
+                $customer_id = $data['id'];
+
+                // Return the newly created customer ID
+                return $customer_id;
+            } else {
+                Log::error('Customer ID not found in API response', ['response' => $data]);
+            }
+
+            // Return the newly created customer ID if available
+            return $data['id'] ?? null;
+        }
+
+        // Return null if the API request fails
+        return null;
+    }
+    protected function insertCustomerServices($customer_id, $service_data)
+    {
+        // Define the base API URL for inserting customer services
+        //$base_url = 'http://localhost/marketing_bridge/api/insert_customer_services.php'; // Replace with the actual API URL
+        $base_url = 'https://starbase.rocks/marketing_bridge/api/insert_customer_services.php';
+
+        // Extract the necessary data from the $service_data array
+        $service_id = isset($service_data['service_id']) ? $service_data['service_id'] : 1; // Default to 1 if not provided
+        $amount = isset($service_data['price']) ? $service_data['price'] : '0.00'; 
+        $buisness_name = isset($service_data['buisness_name']) ? $service_data['buisness_name'] : 'default_business';
+        $branch_name = isset($service_data['branch_name']) ? $service_data['branch_name'] : 'default_branch';
+        $order_id = isset($service_data['order_id']) ? $service_data['order_id'] : '0';
+        $invoice_number = isset($service_data['invoice_number']) ? $service_data['invoice_number'] : '0';
+        $member_code = isset($service_data['membership_code']) ? $service_data['membership_code'] : '0';
+
+        //dd($service_data);
+        // Construct the full API URL with query parameters
+        $url = $base_url . '?' . http_build_query([
+            'customer_id' => $customer_id,
+            'service_id' => $service_id,
+            'amount' => $amount,
+            'buisness_name' => $buisness_name,
+            'branch_name' => $branch_name,
+            'order_id' => $order_id,
+            'invoice_number' => $invoice_number,
+            'member_code' => $member_code
+        ]);
+        //dd($url);
+    
+        try {
+            // Send a GET request to the API
+            $response = Http::get($url);
+            
+            // Log or debug the response (optional)
+            // dd($response);
+    
+            // Check if the response is successful
+            if ($response->successful()) {
+                
+                // Log the successful response (optional)
+                Log::info('Customer service inserted successfully', ['response' => $response->json()]);
+    
+                // Return true if the service insertion was successful
+                return true;
+            }
+    
+            // Log the failure response (optional)
+            Log::error('Failed to insert customer service', ['response' => $response->body()]);
+    
+        } catch (\Exception $e) {
+            // Log the exception message
+            Log::error('Exception occurred while inserting customer service', ['error' => $e->getMessage()]);
+        }
+    
+        // Return false if the API request fails
+        return false;
+    }
+    protected function insertintoEligibility($customer_id, $service_id,$service_data)
+    {
+        try {
+            // Define the API URL for inserting a new customer eligibility
+            //$url = 'http://localhost/marketing_bridge/api/insert_eligibility.php'; // Replace with the actual API URL
+            $url = 'https://starbase.rocks/marketing_bridge/api/insert_eligibility.php';
+
+            // Prepare request body
+            $params = [
+                'customer_id' => $customer_id,
+                'service_id' => $service_id
+            ];
+            //dd($params);
+            // Send a POST request with parameters using Http::post
+            $response = Http::get($url, $params); // Use POST since the PHP API expects POST request
+
+            // Check if the response is successful
+            if ($response->successful()) {
+                $this->insertCustomerServices($customer_id, $service_data); // Ensure services are inserted after eligibility
+
+                $data = $response->json();
+                //$this->insertCustomerServices($customer_id, $service_data);
+                //dd($service_data);
+
+                // Log the response message
+                Log::info('Service eligibility response', ['message' => $data]);
+            } else {
+                dd("not successful");
+
+                Log::error('Error inserting customer service eligibility', [
+                    'response_code' => $response->status(),
+                    'response_body' => $response->body(),
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Exception occurred while inserting customer service eligibility', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    
+        // Return false if the API request fails
+        return false;
+    }
+    protected function handleExternalApi($customer_mobile, $customer_name, $total, $order_id, $invoice_number, $branch_id, $code)
+    {
+        // Get the company name and branch name
+        $company_name = DB::table('settings')
+            ->where('name', 'company_name')
+            ->value('value');
+        
+        $branch_name = DB::table('branches')
+            ->where('id', $branch_id)
+            ->value('name');
+    
+        // Prepare service data
+        $service_data = [
+            'service_name' => 'Loyalty Services',
+            'quantity' => 1,
+            'price' => $total,
+            'order_id' => $order_id,
+            'membership_code' => $code ?? '',
+            'invoice_number' => $invoice_number,
+            'buisness_name' => $company_name,
+            'branch_name' => $branch_name
+        ];
+    
+        // Check if the customer exists or create a new one
+        $customer_id = $this->getCustomerId($customer_mobile);
+        if (!$customer_id) {
+            // Create a new customer
+            $customer_id = $this->insertCustomer($customer_name, $customer_mobile);
+            
+            // Check if customer creation was successful
+            if ($customer_id) {
+                // Insert into eligibility and then into customer services
+                $this->insertintoEligibility($customer_id, '1', $service_data);
+            } else {
+                Log::error('Failed to create new customer', ['mobile' => $customer_mobile]);
+            }
+        } else {
+            // If customer exists, insert customer services
+            $inserted = $this->insertCustomerServices($customer_id, $service_data);
+            
+            // Log if services insertion failed
+            if (!$inserted) {
+                Log::error('Failed to insert customer services for existing customer', ['customer_id' => $customer_id]);
+            }
+        }
+    }
+    protected function insertintoEligibilitynew($customer_id, $service_id, $service_data)
+    {
+        try {
+            // Define the API URL for inserting customer eligibility
+            //$url = 'http://localhost/marketing_bridge/api/insert_eligibility.php';
+            $url = 'https://starbase.rocks/marketing_bridge/api/insert_eligibility.php';
+
+            // Prepare request body
+            $params = [
+                'customer_id' => $customer_id,
+                'service_id' => $service_id
+            ];
+
+            // Send a POST request with parameters using Http::post
+            $response = Http::post($url, $params); // Use POST since the PHP API expects POST request
+            
+            // After inserting eligibility, insert customer services
+            if ($response->successful()) {
+                $this->insertCustomerServices($customer_id, $service_data); // Make sure to insert services here
+                $data = $response->json();
+                Log::info('Service eligibility response', ['message' => $data]);
+            } else {
+                Log::error('Error inserting customer service eligibility', [
+                    'response_code' => $response->status(),
+                    'response_body' => $response->body(),
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Exception occurred while inserting customer service eligibility', [
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        // Return false if the API request fails
+        return false;
+    }
+
+            
+}

@@ -1,0 +1,1765 @@
+<script setup>
+import axios from 'axios'
+import { computed, onBeforeMount, onMounted, reactive, ref, watch } from 'vue'
+import { Head, Link, router, usePage, useForm } from '@inertiajs/vue3'
+import { Dialog, DialogPanel, DialogTitle, DialogOverlay, Menu, MenuButton, MenuItem, MenuItems, TransitionChild, TransitionRoot } from '@headlessui/vue'
+import {
+	ArrowLeftOnRectangleIcon,
+	ArrowsRightLeftIcon,
+	Bars3BottomLeftIcon,
+	BriefcaseIcon,
+	BuildingStorefrontIcon,
+	CheckIcon,
+	CheckCircleIcon,
+	ChevronUpDownIcon,
+	EllipsisHorizontalIcon,
+	ExclamationTriangleIcon,
+	HomeIcon,
+	MagnifyingGlassIcon,
+	MinusSmallIcon,
+	PlusSmallIcon,
+	PrinterIcon,
+	ShoppingCartIcon,
+	ShoppingBagIcon,
+	TrashIcon,
+	TruckIcon,
+	XMarkIcon
+} from '@heroicons/vue/24/outline'
+
+import Notification from '@/Components/Notification.vue'
+import Receipt from '@/Components/Receipt.vue'
+import Listbox from '@/Components/Listbox.vue'
+
+import { useUserSettingStore } from '@/store/user-setting'
+import { useOrderSettingStore } from '@/store/order-setting'
+
+const page = usePage()
+
+const props = defineProps({
+	order: Object,
+	vat_rate: Number,
+	tables: Array,
+	waiters: Array,
+	pending_orders: Array,
+	dineTypes: Object,
+	discountTypes: Object,
+	statuses: Object,
+	bill_print: Boolean,
+})
+
+const mobileMenuOpen = ref(false)
+const modalOpen = ref(false)
+const loading = ref(false)
+const vat_add = ref(false)
+
+
+
+const checkingMember = reactive({
+	success: '',
+	//is_member: '',
+	message: ''
+})
+
+const checkingEligibility2 = reactive({
+	success: '',
+	is_member: '',
+	message: ''
+})
+
+const checkingEligibility = reactive({
+    success: null,
+    is_member: false,
+    message: ''
+})
+const customer = ref(null)
+const currentBranch = ref(page.props.branch ?? {})
+const settingTokenValue = ref(Number(page.props.setting.token_value ?? 1))
+const isWaiter = ref(page.props.auth.user.is_waiter)
+const waiterId = ref(isWaiter.value ? page.props.auth.user.id : null)
+
+const filterCategory = ref(null)
+const filteredProducts = ref([])
+const products = ref([])
+const topProducts = ref([])
+const riders = ref([])
+const customers = ref([])
+const categories = ref([])
+const userSetting = useUserSettingStore()
+const orderSetting = useOrderSettingStore()
+const totalTokenAmount = ref(0)
+const searchCode = ref('')
+
+const updatable = computed(() => Boolean(props.order?.id))
+
+const productactive = computed(() => Boolean(product => product.status === 'active'))
+
+// computed: {
+//     filteredProducts() {
+//       return this.products.filter(product => product.status === 'active');
+//     }
+//   }
+const printable = computed(() => {
+	console.log(props.bill_print);
+	return page.props.navigation.routes.includes('pos.print')
+		&& updatable.value;
+});
+const added_in_loyalty = ref(false);
+
+// Log props to check the received order
+console.log('props.order:', props.order);
+console.log(added_in_loyalty);
+
+// added_in_loyalty.value = Number(props.order?.added_in_loyalty) === 1;
+
+const form = useForm({
+	order_id: props.order?.id ?? '',
+	date: props.order?.date,
+	date_time: props.order?.datetime_raw,
+	number: props.order?.number,
+	sub_total: props.order?.sub_total,
+	dine_type: props.order?.dine_type ?? 'dine-in',
+	guest_number: props.order?.guest_number,
+	discount_type: props.order?.discount_type ?? 'percent',
+	discount_rate: props.order?.discount_rate,
+	discount_amount: props.order?.discount_amount,
+	vat_rate: props.order?.vat_rate ?? props.vat_rate,
+	vatable_amount: props.order?.vatable_amount,
+	vat_amount: props.order?.vat_amount,
+	vat_add: Number(props.order?.vat_add) > 0 ? true : false,
+	added_in_loyalty: Number(props.order?.added_in_loyalty) === 1,
+
+	service_cost: props.order?.service_cost ?? currentBranch.value.service_cost,
+	total: props.order?.total,
+	cash: props.order?.cash,
+	change: props.order?.change,
+	waiter_id: props.order?.waiter_id ?? waiterId.value,
+	member_code: props.order?.member_code ?? null,
+	member_discount_rate: props.order?.member_discount_rate,
+	customer_id: props.order?.customer_id ?? '',
+	customer_name: props.order?.customer?.name,
+	customer_mobile: props.order?.customer?.mobile,
+	token: props.order?.token ?? 0,
+	token_use: Number(props.order?.token) > 0 ? true : false,
+	note: props.order?.note,
+	table: props.order?.stuff_id,
+	status: props.order?.status ?? 'accept',
+	delivery_address: props.order?.order_delivery?.address,
+	rider_id: props.order?.order_delivery?.rider_id,
+	group_items: props.order?.products ?? [],
+	group_methods: props.order?.methods ?? [],
+})
+
+const branchForm = useForm({
+	branch_id: page.props.branch?.id
+})
+
+const setBranch = (id) => {
+    branchForm.branch_id = id
+	page.props.alertMessage = {};
+
+    branchForm.post(route('index'), {
+        onFinish: () => {}
+    })
+}
+
+onMounted(() => {
+	selectCustomer()
+
+	Echo.channel(`pos.branches.${currentBranch.value.id}`)
+		.listen('OrderPlaced', (e) => {
+			let modifiedIndex = props.pending_orders.findIndex((o) => o.id == e.order.id)
+
+			if ((!isWaiter.value || (isWaiter.value && e.order.waiter_id == waiterId.value)) && modifiedIndex < 0) {
+				props.pending_orders.unshift(e.order)
+			}
+		})
+		.listen('OrderModified', (e) => {
+			let modifiedIndex = props.pending_orders.findIndex((o) => o.id == e.order.id)
+
+			if (e.order.status == 'complete' && modifiedIndex >= 0) {
+				props.pending_orders.splice(modifiedIndex, 1)
+			} else if (e.order.status != 'complete' && modifiedIndex >= 0) {
+				props.pending_orders[modifiedIndex] = e.order
+			} else if (e.order.status != 'complete' && modifiedIndex < 0) {
+				props.pending_orders.unshift(e.order)
+			}
+		})
+})
+
+// watch(
+// 	() => filterCategory.value,
+// 	(newVal) => {
+// 		if (newVal == 'top_sold') {
+// 			filteredProducts.value = products.value.filter((p) => topProducts.value.includes(p.id))
+// 		} else {
+// 			filteredProducts.value = products.value.filter((p) => !newVal != '' || p.product_category_id == newVal)
+// 		}
+// 	}
+// )
+watch(
+  () => filterCategory.value,
+  (newVal) => {
+    if (newVal == 'top_sold') {
+      filteredProducts.value = products.value.filter((p) => topProducts.value.includes(p.id) && p.status === 'active');
+    } else {
+      filteredProducts.value = products.value.filter((p) => (newVal == '' || p.product_category_id == newVal) && p.status === 'active');
+    }
+  }
+)
+
+// Watch for changes to order
+watch(() => props.order, (newOrder) => {
+  if (newOrder && newOrder.added_in_loyalty !== undefined) {
+    added_in_loyalty.value = Boolean(Number(newOrder.added_in_loyalty));
+  }
+})
+
+const updatePaymentMethod = () => {
+	form.group_methods = orderSetting.paymentMethods.map(method => {
+		method.payment_method_id = method.id
+		method.amount = form.group_methods.find((i) => i.payment_method_id == method.id)?.amount ?? null
+		return method;
+	});
+}
+
+const payAmount = () => {
+	let method_amount = form.group_methods.reduce((sum, item) => sum + Number(item.amount), 0)
+	console.log(method_amount);
+	let total = Number(form.total)
+	let need_amount = total - method_amount
+
+	let token = 0
+	if (form.token_use && need_amount > 0) {
+		token = need_amount > totalTokenAmount.value ? totalTokenAmount.value : 0
+	}
+	let cash = method_amount + token
+
+	form.token = token.toFixed(2)
+	form.cash = cash.toFixed(2)
+	calc()
+}
+
+const loadBasicData = async () => {
+	console.log("Test Load Data");
+	if (orderSetting.isExpired) {
+		loading.value = true
+		await orderSetting.load()
+		loading.value = false
+	}
+//  // Filter products to include only active ones
+//  const activeProducts = orderSetting.products.filter(product => product.status === 'active');
+console.log("Test Load Data");
+
+	categories.value = orderSetting.categories
+	customers.value = orderSetting.customers
+	//filteredProducts.value = orderSetting.products
+	filteredProducts.value = orderSetting.products.filter(product => product.status === 'active');
+
+	products.value = orderSetting.products
+	//products.value = orderSetting.products.filter(product => product.status === 'active')
+	riders.value = orderSetting.riders
+	topProducts.value = orderSetting.topProducts
+	//topProducts.value = orderSetting.products.filter(product => product.status === 'active')
+
+	updatePaymentMethod()
+}
+
+loadBasicData()
+
+const addMenuItem = (product_id) => {
+	let product = products.value.find((product) => product.id == product_id)
+	let itemFound = form.group_items.find((i) => i.product_id == product_id)
+	if (!product.rate) {
+		alert('Item price not set yet!')
+		return
+	}
+	if (itemFound) {
+		itemFound.quantity++
+	} else if (product) {
+		form.group_items.push({
+			id: '',
+			status: 'pending',
+			product_id: product.id,
+			product_name: product.name,
+			// product_image: product.image,
+			rate: product.rate,
+			code: product.code,
+			vat_applicable: product.vat_applicable,
+			quantity: 1
+		})
+	}
+	calc()
+}
+
+const subMenuItem = (product_id) => {
+	let itemFound = form.group_items.find((i) => i.product_id == product_id)
+	itemFound.quantity--
+
+	calc()
+}
+
+// const addMenuItemSearch = () => {
+// 	let products = []
+// 	let product = products.value.find((product) => product.code == searchCode.value)
+
+// 	if (!product && searchCode.value) {
+// 		let searchValue = searchCode.value
+// 		products = products.value.filter((item) => {
+// 			return item.name.toLowerCase().includes(searchValue.toLowerCase())
+// 		})
+// 	}
+
+// 	if (products.length > 0 && searchCode.value) {
+// 		addMenuItem(products[0].id)
+// 		searchCode.value = null
+// 	}
+// }
+
+
+const addMenuItemSearch = () => {
+	let filteredProducts = [];
+	let product = products.value.find((product) => product.code == searchCode.value);
+
+	if (!product && searchCode.value) {
+		let searchValue = searchCode.value.toLowerCase();
+		filteredProducts = products.value.filter((item) => {
+			return item.status === 'active' && item.name.toLowerCase().includes(searchValue);
+		});
+	}
+
+	if (filteredProducts.length > 0 && searchCode.value) {
+		addMenuItem(filteredProducts[0].id);
+		searchCode.value = null;
+	}
+}
+
+
+const filterSearch_old = () => {
+	let product = products.value.find((product) => product.code == searchCode.value)
+
+	if (!product && searchCode.value) {
+		let searchValue = searchCode.value
+		filteredProducts.value = products.value.filter((item) => {
+			return item.name.toLowerCase().includes(searchValue.toLowerCase())
+		})
+	} else {
+		filteredProducts.value = products.value
+	}
+	filterCategory.value = null
+}
+
+const filterSearch = () => {
+	let product = products.value.find((product) => product.code == searchCode.value);
+
+	if (!product && searchCode.value) {
+		let searchValue = searchCode.value;
+		filteredProducts.value = products.value.filter((item) => {
+			return item.status === 'active' && item.name.toLowerCase().includes(searchValue.toLowerCase());
+		});
+	} else {
+		filteredProducts.value = products.value.filter((item) => item.status === 'active');
+	}
+	filterCategory.value = null;
+}
+
+const calc = () => {
+	let sub_total = form.group_items.reduce((carry, val) => carry + Number(val.rate) * Number(val.quantity), 0)
+	let non_vatable_amount = form.group_items.filter((i) => !i.vat_applicable).reduce((carry, val) => carry + Number(val.rate) * Number(val.quantity), 0)
+	let discount_rate = Number(form.discount_rate ?? 0)
+	let vat_rate = Number(form.vat_rate ?? 0)
+	let cash = Number(form.cash ?? 0)
+	let service_cost = Number(form.service_cost ?? 0)
+	service_cost = Math.round(service_cost);
+	sub_total = Math.round(sub_total);
+	non_vatable_amount = Math.round(non_vatable_amount);
+	let discount_percent = discount_rate / 100
+	let discount_amount = form.discount_type == 'percent' ? sub_total * discount_percent : discount_rate
+	discount_amount = Math.round(discount_amount);
+	let fraction_discount = non_vatable_amount > 0 ? (non_vatable_amount / sub_total) * discount_amount : 0
+	fraction_discount = Math.round(fraction_discount);
+	let new_non_vatable_amount = non_vatable_amount - fraction_discount
+	let vatable_amount = sub_total - discount_amount - new_non_vatable_amount + service_cost
+	let vat_percent = vat_rate / 100
+	let vat_amount = vatable_amount * vat_percent
+	vat_amount = Math.round(vat_amount);
+	let total = sub_total + service_cost - discount_amount + vat_amount
+	let change_amount = cash - total
+	form.sub_total = sub_total.toFixed(2)
+	form.discount_amount = discount_amount.toFixed(2)
+	form.vatable_amount = vatable_amount.toFixed(2)
+	form.vat_amount = vat_amount
+	form.total = total.toFixed(2)
+	form.change = change_amount >= 0 ? change_amount.toFixed(2) : ''
+}
+
+
+const selectCustomer = () => {
+	console.log('find customer')
+	customer.value = customers.value.find((i) => i.mobile == form.customer_mobile)
+
+	console.log(customer.value)
+	form.customer_name = customer.value?.name
+
+	totalTokenAmount.value = Number(customer.value?.balance) / settingTokenValue.value
+// Check eligibility only if customer_mobile is defined
+if (form.customer_mobile) {
+        checkEligibility();
+    }
+}
+
+const checkEligibility = () => {
+    console.log("Checking Eligibility: " + form.customer_mobile);
+    
+    if (form.customer_mobile.length > 9) {
+        const eligibilityUrl = `${page.props.module.check_eligibility}?phone=${encodeURIComponent(form.customer_mobile)}&service_id=1`;
+        
+        console.log("Eligibility URL: ", eligibilityUrl);
+        
+        axios.post(eligibilityUrl)
+            .then((response) => {
+                const data = response.data;
+                checkingEligibility.success = data.eligible;  // True or False based on eligibility
+                checkingEligibility.is_member = data.customer_id !== null;  // Check if the customer exists
+                checkingEligibility.message = data.eligible
+                    ? 'Customer is eligible for the service.'
+                    : 'Customer is not eligible for the service.';
+                    
+                console.log("Checking Eligibility: " + checkingEligibility.message);
+                
+                if (data.eligible) {
+                   
+
+                    // Show total services and free coffee offer
+                    if (data.total_services !== undefined) {
+                        checkingEligibility.message += ` Customer has used ${data.total_services} service(s).`;
+
+                        // if (data.total_services > 4 && data.total_services < 6) {
+						if(data.total_services > 5 && data.total_services < 7 || data.total_services > 9 && data.total_services < 1){
+                            //checkingEligibility.message += " He will get a free coffee!";
+							checkingEligibility.message = " He will get a free coffee!";
+							
+                        }
+                    }
+
+                    console.log("Checking Eligibility: " + checkingEligibility.message);
+                }else{
+					checkingEligibility.success = false;  // True or False based on eligibility
+
+					checkingEligibility.message = " No Registered Member In Loyalty Program!";
+					console.log("Checking Eligibility: " + checkingEligibility.message);
+
+				}
+            })
+            .catch((error) => {
+                // Handle error from the API call
+                checkingEligibility.success = false;
+                checkingEligibility.is_member = false;
+                checkingEligibility.message = 'Error checking eligibility. Please try again.';
+                console.error("Eligibility API Error: ", error.response ? error.response.data : error);
+            });
+    } else {
+        // Reset checkingMember status if the phone number is too short
+        checkingEligibility.success = null;
+        checkingEligibility.is_member = null;
+        checkingEligibility.message = null;
+    }
+};
+const checkDiscount = () => {
+	console.log(page.props.module.discount_url);
+	form.discount_rate = 0
+	form.member_discount_rate = 0
+	if (form.member_code.length > 3) {
+		axios.post(page.props.module.discount_url, { code: form.member_code }).then((response) => {
+			checkingMember.success = response.data.success
+			checkingMember.is_member = response.data.is_member
+			checkingMember.message = response.data.message
+			if (response.data.success) {
+				form.discount_rate = Number(response.data.discounts[page.props.module.discount_name])
+				checkingMember.message += ' & discount ' + form.discount_rate + '%'
+				form.member_discount_rate = Number(response.data.discounts[page.props.module.discount_name]) //not changable hidden
+
+			}
+		})
+	} else {
+		checkingMember.success = null
+		checkingMember.is_member = null
+		checkingMember.message = null
+	}
+}
+const checkEligibility2 = () => {
+    console.log("Checking Eligibility: " + form.customer_mobile);
+    
+    if (form.customer_mobile.length > 9) {
+        const eligibilityUrl = `${page.props.module.check_eligibility}?phone=${encodeURIComponent(form.customer_mobile)}&service_id=1`;
+        
+        console.log("Eligibility URL: ", eligibilityUrl);
+        
+        axios.post(eligibilityUrl)
+            .then((response) => {
+                const data = response.data;
+                checkingMember.success = data.eligible;  // True or False based on eligibility
+                checkingMember.is_member = data.customer_id !== null;  // Check if the customer exists
+                checkingMember.message = data.eligible
+                    ? 'Customer is eligible for the service.'
+                    : 'Customer is not eligible for the service.';
+                    
+                console.log("Checking Eligibility: " + checkingMember.message);
+                
+                if (data.eligible) {
+                    form.discount_rate = Number(data.discounts?.[page.props.module.discount_name] || 0);  // Safely access discounts
+                    form.member_discount_rate = form.discount_rate;  // Set member discount rate (hidden)
+                    checkingMember.message += ` & discount ${form.discount_rate}%`;
+					console.log("Checking Eligibility: " + checkingMember.message);
+
+                }
+            })
+            .catch((error) => {
+                // Handle error from the API call
+                checkingMember.success = false;
+                checkingMember.is_member = false;
+                checkingMember.message = 'Error checking eligibility. Please try again.';
+                console.error("Eligibility API Error: ", error.response ? error.response.data : error);
+            });
+    } else {
+        // Reset checkingMember status if the phone number is too short
+        checkingMember.success = null;
+        checkingMember.is_member = null;
+        checkingMember.message = null;
+    }
+}
+const checkDiscount_std = () => {
+	form.discount_rate = 0
+
+	if(form.member_code.length > 3) {
+		axios.post(page.props.module.discount_url, {code: form.member_code})
+			.then(function (response) {
+				checkingMember.success = response.data.success
+				checkingMember.is_member = response.data.is_member
+				checkingMember.message = response.data.message
+				// console.log(response.data);
+
+				if(response.data.success) {
+					form.discount_rate = response.data.discounts[props.module.discount_name] ?? 0
+					checkingMember.message += ' & discount ' + form.discount_rate + '%'
+				}
+			});
+	}else {
+		checkingMember.success = null
+		checkingMember.is_member = null
+		checkingMember.message = null
+	}
+}
+
+const resetForm = () => {
+	if (confirm('Are you sure you want to reset?')) {
+		form.reset()
+		calc()
+	}
+}
+
+const printWindow = () => {
+	page.props.alertMessage = {};
+
+	form.post(route('pos.printed'), {
+		onFinish: () => {
+			// window.alert("print");
+			window.print()
+			setTimeout(() => {
+				router.visit(route('pos.create'))
+			}, 1000)
+		}
+	})
+}
+
+
+
+// Define modal visibility state
+const showModal = ref(false);
+
+
+
+
+
+const submit2 = () => {
+	searchCode.value = null
+	form.order_id = props.order?.id
+	page.props.alertMessage = {};
+	if (customer.value) {
+    showModal.value = true; // Open modal if customer exists
+	added_in_loyalty.value = true;
+	//submit();
+  } 
+
+	form.post(route('pos.store'), {
+		onSuccess: (page) => {
+			form.order_id = page.props.order?.id ?? ''
+			form.date = page.props.order?.date
+			form.date_time = page.props.order?.datetime_raw
+			form.invoice_number = page.props.order?.invoice_number
+			form.group_items = page.props.order?.products ?? []
+			form.group_methods = page.props.order?.methods ?? []
+
+			updatePaymentMethod()
+		},
+		onFinish: () => {
+			if (isWaiter.value && !form.order_id) {
+				form.reset()
+			}
+		}
+	})
+}
+
+
+
+
+
+
+
+const submit = () => {
+	console.log(checkingEligibility);
+
+	console.log(checkingEligibility.success);
+
+
+	
+		// Check if the modal should be opened
+if (form.customer_mobile) {
+    console.log("Checking eligibility success: " + checkingEligibility.success);
+
+    // Only proceed with the loyalty check if the total is greater than 500
+    if (form.total > 500) {
+        
+        // Check if the customer is eligible or if checkingEligibility is empty
+        if (checkingEligibility.success === false || checkingEligibility === '') {
+            console.log("Eligibility check failed or is empty, opening modal.");
+            showModal.value = true; // Open modal if customer is not eligible or eligibility is empty
+            console.log("Modal opened: " + checkingEligibility.success);
+        } else {
+            // If eligibility check passes, set added_in_loyalty to true and submit the form
+            added_in_loyalty.value = true;
+            console.log("Customer added to loyalty: " + checkingEligibility.success);
+            console.log("added_in_loyalty value: " + added_in_loyalty.value);
+
+            // Perform the submit action
+            performSubmit();
+        }
+    }else{
+		// If order amount less then 500
+		performSubmit();
+	}
+    
+} else {
+    // If no customer mobile is provided, proceed to submit directly
+    performSubmit();
+}
+
+	}
+
+
+const performSubmit = () => {
+	form.added_in_loyalty = added_in_loyalty.value ?? false; // Add added_in_loyalty to form data
+
+	searchCode.value = null
+	form.order_id = props.order?.id
+	page.props.alertMessage = {};
+	
+
+	form.post(route('pos.store'), {
+		onSuccess: (page) => {
+			form.order_id = page.props.order?.id ?? ''
+			form.date = page.props.order?.date
+			form.date_time = page.props.order?.datetime_raw
+			form.invoice_number = page.props.order?.invoice_number
+			form.group_items = page.props.order?.products ?? []
+			form.group_methods = page.props.order?.methods ?? []
+
+			updatePaymentMethod()
+		},
+		onFinish: () => {
+			if (isWaiter.value && !form.order_id) {
+				form.reset()
+			}
+		}
+	})
+}
+// Perform the actual submission
+const performSubmit2 = () => {
+	console.log(added_in_loyalty.value);
+
+
+
+	searchCode.value = null
+	form.order_id = props.order?.id
+	page.props.alertMessage = {};
+	form.added_in_loyalty = added_in_loyalty.value ?? false; // Add added_in_loyalty to form data
+
+  	form.post(route('pos.store'), {
+    onSuccess: (page) => {
+      form.value.order_id = page.props.order?.id ?? '';
+      form.value.date = page.props.order?.date;
+	  form.value.added_in_loyalty = added_in_loyalty.value ?? false;
+      form.value.date_time = page.props.order?.datetime_raw;
+      form.value.invoice_number = page.props.order?.invoice_number;
+      form.value.group_items = page.props.order?.products ?? [];
+      form.value.group_methods = page.props.order?.methods ?? [];
+
+      updatePaymentMethod();
+    },
+    onFinish: () => {
+      if (isWaiter.value && !form.value.order_id) {
+        form.value.reset();
+      }
+    },
+  });
+};
+
+
+// Logic for Yes/No actions
+const handleYes = () => {
+  //alert("Loyalty Card offered!");
+  added_in_loyalty.value = true;
+  console.log("Added in loyalty card!");
+  console.log(added_in_loyalty.value);
+
+  showModal.value = false; // Close modal
+  performSubmit(); // Proceed with submission
+}
+
+const handleNo = () => {
+  //alert("Loyalty Card not offered.");
+  added_in_loyalty.value = false;
+  console.log("No Added in loyalty card!");
+  performSubmit();
+
+  showModal.value = false; // Close modal
+}
+
+const boxTextSize = (name) => {
+	if (name.length < 20) {
+		return 'text-xl/7'
+	} else if (name.length < 30) {
+		return 'text-lg/6'
+	} else if (name.length < 40) {
+		return 'text-base/5'
+	} else {
+		return 'text-sm/4'
+	}
+}
+
+const displayStyle = (method) => {
+	return reactive({
+		backgroundColor: method.bg_color,
+		color: method.text_color,
+		fontSize: method.text_size,
+		fontWeight: method.font_weight
+	})
+}
+
+const pageNavigation = [
+	{
+		name: 'Dashboard',
+		icon: HomeIcon,
+		href: route('dashboard'),
+		current: false,
+		visible: !isWaiter.value
+	},
+	{
+		name: 'POS',
+		icon: ShoppingCartIcon,
+		href: route('pos.create'),
+		current: true,
+		visible: true
+	},
+	{
+		name: 'Kitchen',
+		icon: ShoppingBagIcon,
+		href: route('production.index'),
+		current: false,
+		visible: page.props.module.production
+	},
+	{
+		name: 'Order Bill',
+		icon: BriefcaseIcon,
+		href: route('order.index'),
+		current: false,
+		visible: !isWaiter.value
+	}
+]
+</script>
+
+<style scoped>
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Modal Content */
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 400px;
+}
+
+/* Modal Title */
+.modal-title {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+/* Modal Buttons */
+.modal-buttons {
+  display: flex;
+  justify-content: space-around;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Button Hover Effects */
+.btn-success:hover {
+  background-color: #218838;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+</style>
+<template>
+	<Head title="POS" />
+
+	<div class="flex h-screen print:hidden">
+		<Notification />
+
+		<!-- Narrow sidebar -->
+		<div class="hidden w-28 overflow-y-auto bg-primary-700 lg:block">
+			<div class="flex w-full h-full flex-col items-center py-6">
+				<a href="/" class="flex flex-shrink-0 items-center">
+					<img v-if="page.props.app.logo" class="h-16 w-auto" :src="page.props.app.logo" alt="logo" />
+					<span v-else class="text-secondary-500 px-3 text-xl font-fancy leading-6 font-medium">{{
+						page.props.app.name }}</span>
+				</a>
+				<div class="mt-6 w-full flex-1 space-y-1 px-2">
+					<Link v-for="item in pageNavigation" :key="item.name" v-show="item.visible" :href="item.href" :class="[
+						item.current ? 'bg-primary-800 text-white' : 'text-primary-100 hover:bg-primary-800 hover:text-white',
+						'group w-full p-3 rounded-md flex flex-col items-center text-xs font-medium'
+					]" :aria-current="item.current ? 'page' : undefined">
+					<component :is="item.icon"
+						:class="[item.current ? 'text-white' : 'text-primary-300 group-hover:text-white', 'h-6 w-6']"
+						aria-hidden="true" />
+					<span class="mt-2">{{ item.name }}</span>
+					</Link>
+				</div>
+
+				<div class="pb-5 w-full flex flex-col space-y-1 px-2">
+					<Link :href="route('logout')" method="post" as="button" :class="[
+						'text-primary-100 hover:bg-primary-800 hover:text-white',
+						'group w-full p-3 rounded-md flex flex-col items-center text-xs font-medium'
+					]">
+					<ArrowLeftOnRectangleIcon class="text-primary-300 group-hover:text-white h-6 w-6" aria-hidden="true" />
+					<span class="mt-2 flex items-center">Logout</span>
+					</Link>
+					<Link :href="route('profile.index')" class="w-full flex-shrink-0">
+					<img class="mx-auto block h-10 w-10 rounded-full"
+						:src="page.props.auth.user?.image_url" alt="Image" />
+					<p class="mt-2 text-white text-xs whitespace-wrap text-center">{{ page.props.auth.user?.name }}</p>
+
+					<div class="sr-only">
+						<p>Account settings</p>
+					</div>
+					</Link>
+				</div>
+			</div>
+		</div>
+
+		<!-- Mobile menu -->
+		<TransitionRoot as="template" :show="mobileMenuOpen">
+			<Dialog as="div" class="relative z-20 lg:hidden" @close="mobileMenuOpen = false">
+				<TransitionChild as="template" enter="transition-opacity ease-linear duration-300" enter-from="opacity-0"
+					enter-to="opacity-100" leave="transition-opacity ease-linear duration-300" leave-from="opacity-100"
+					leave-to="opacity-0">
+					<div class="fixed inset-0 bg-stone-600 bg-opacity-75" />
+				</TransitionChild>
+
+				<div class="fixed inset-0 z-40 flex">
+					<TransitionChild as="template" enter="transition ease-in-out duration-300 transform"
+						enter-from="-translate-x-full" enter-to="translate-x-0"
+						leave="transition ease-in-out duration-300 transform" leave-from="translate-x-0"
+						leave-to="-translate-x-full">
+						<DialogPanel class="relative flex w-full max-w-xs flex-1 flex-col bg-primary-700 pt-5 pb-4">
+							<TransitionChild as="template" enter="ease-in-out duration-300" enter-from="opacity-0"
+								enter-to="opacity-100" leave="ease-in-out duration-300" leave-from="opacity-100"
+								leave-to="opacity-0">
+								<div class="absolute top-1 right-0 -mr-14 p-1">
+									<button type="button"
+										class="flex h-12 w-12 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-white"
+										@click="mobileMenuOpen = false">
+										<XMarkIcon class="h-6 w-6 text-white" aria-hidden="true" />
+										<span class="sr-only">Close sidebar</span>
+									</button>
+								</div>
+							</TransitionChild>
+							<div class="flex flex-shrink-0 items-center px-4">
+								<img v-if="page.props.app.logo" class="h-16 w-auto" :src="page.props.app.logo" alt="logo" />
+								<span v-else class="text-secondary-500 px-3 text-xl font-fancy leading-6 font-medium">{{
+									page.props.app.name }}</span>
+							</div>
+							<div class="mt-5 h-0 flex-1 overflow-y-auto px-2">
+								<nav class="flex h-full flex-col">
+									<div class="space-y-1">
+										<a v-for="item in pageNavigation" :key="item.name" v-show="item.visible"
+											:href="item.href" :class="[
+												item.current ? 'bg-primary-800 text-white' : 'text-primary-100 hover:bg-primary-800 hover:text-white',
+												'group py-2 px-3 rounded-md flex items-center text-sm font-medium'
+											]" :aria-current="item.current ? 'page' : undefined">
+											<component :is="item.icon"
+												:class="[item.current ? 'text-white' : 'text-primary-300 group-hover:text-white', 'mr-3 h-6 w-6']"
+												aria-hidden="true" />
+											<span>{{ item.name }}</span>
+										</a>
+									</div>
+								</nav>
+							</div>
+						</DialogPanel>
+					</TransitionChild>
+					<div class="w-14 flex-shrink-0" aria-hidden="true">
+						<!-- Dummy element to force sidebar to shrink to fit close icon -->
+					</div>
+				</div>
+			</Dialog>
+		</TransitionRoot>
+
+		<!-- Content area -->
+		<div class="flex flex-1 flex-col overflow-hidden">
+			<!-- Main content -->
+			<div class="min-w-md flex flex-1 items-stretch overflow-hidden">
+				<main class="flex-1 overflow-y-auto">
+					<!-- Primary column -->
+					<section aria-labelledby="primary-heading" class="flex h-full min-w-0 flex-1 flex-col lg:order-last">
+						<h1 id="primary-heading" class="sr-only">Products</h1>
+						<div class="flex flex-col relative w-full h-full divide-y divide-stone-200">
+							<div class="flex-1 flex w-full shrink-0 bg-white space-y-2 overflow-y-auto">
+								<section class="flex-1 flex flex-col lg:flex-row divide-x divide-stone-200 w-full">
+									<!-- Category desktop -->
+									<div
+										class="hidden xl:block shrink-0 w-full xl:w-56 relative z-0 focus:outline-none h-full overflow-y-auto">
+										<nav class="flex-1 min-h-0" aria-label="Directory">
+											<div class="relative">
+												<ul role="list"
+													class="flex flex-col relative z-0 divide-y divide-stone-200 overflow-y-auto border-b">
+													<li v-for="(category, index) in categories" :key="index"
+														@click="filterCategory = filterCategory == category.id ? null : category.id"
+														:class="[
+															filterCategory == category.id ? 'bg-indigo-500 text-white' : 'hover:bg-stone-100 text-stone-900',
+															'relative px-2 py-3 flex items-center h-12'
+														]">
+														<div class="flex-1 min-w-0">
+															<button type="button" class="focus:outline-none">
+																<span class="absolute inset-0" aria-hidden="true"></span>
+																<p
+																	class="px-4 whitespace-nowrap text-sm leading-4 font-medium capitalize">
+																	{{ category.name }}
+																</p>
+															</button>
+														</div>
+													</li>
+												</ul>
+											</div>
+										</nav>
+									</div>
+
+									<div
+										class="flex-1 flex flex-col relative z-0 divide-y divide-stone-200 overflow-hidden focus:outline-none">
+										<header class="w-full">
+											<div class="relative z-10 flex h-12 flex-shrink-0 bg-white shadow-sm">
+												<button type="button"
+													class="border-r border-stone-200 px-4 text-stone-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 lg:hidden"
+													@click="mobileMenuOpen = true">
+													<span class="sr-only">Open sidebar</span>
+													<Bars3BottomLeftIcon class="h-6 w-6" aria-hidden="true" />
+												</button>
+												<div class="flex flex-1 justify-between px-4 sm:px-6">
+													<div class="flex flex-1">
+														<form class="flex w-full lg:ml-0" action="#" method="GET">
+															<label for="search-field" class="sr-only">Search all
+																files</label>
+															<div
+																class="relative w-full text-stone-400 focus-within:text-stone-600">
+																<div
+																	class="pointer-events-none absolute inset-y-0 left-0 flex items-center">
+																	<MagnifyingGlassIcon class="h-5 w-5 flex-shrink-0"
+																		aria-hidden="true" />
+																</div>
+																<input v-model="searchCode"
+																	@keydown.enter.prevent="addMenuItemSearch()"
+																	@input="filterSearch()" id="search-field"
+																	class="h-full w-full border-transparent py-2 pl-8 pr-3 text-base text-stone-900 placeholder-stone-500 focus:border-transparent focus:placeholder-stone-400 focus:outline-none focus:ring-0"
+																	placeholder="Search" type="search" />
+															</div>
+														</form>
+													</div>
+												</div>
+											</div>
+										</header>
+
+										<aside>
+											<div class="relative z-10 bg-white shadow-sm overflow-y-auto">
+												<div class="px-3 overflow-hidden">
+													<ul role="list"
+														class="relative w-full max-h-40 flex gap-2.5 sm:flex-wrap z-0 overflow-x-auto sm:overflow-y-auto px-1 py-3">
+														<li class="whitespace-nowrap">
+															<div class="flex-1 min-w-0 flex justify-center items-center">
+																<Link :href="route('pos.create')" title="New"
+																	class="inline-flex items-center gap-x-1.5 rounded-md bg-indigo-500 pl-2 pr-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 border border-indigo-500">
+																<CheckCircleIcon class="-ml-0.5 h-5 w-5"
+																	aria-hidden="true" />
+																New
+																</Link>
+															</div>
+														</li>
+														<li v-for="(pending_order, index) in pending_orders" :key="index"
+															class="whitespace-nowrap">
+															<div class="flex-1 min-w-0 flex justify-center items-center">
+																<Link :href="route('pos.create', pending_order?.id)"
+																	:title="pending_order?.is_printed ? 'Bill printed' : ''"
+																	:class="[
+																		'inline-flex items-center gap-x-1.5 rounded-md bg-indigo-50 px-2 py-1.5 text-sm font-medium text-indigo-600 shadow-sm hover:bg-indigo-100 border',
+																		pending_order?.status == 'pending'
+																			? 'bg-yellow-100 border-yellow-200 text-yellow-900 hover:bg-yellow-200'
+																			: 'border-indigo-200',
+																		order?.id == pending_order?.id ? 'ring-2 ring-secondary-500 ring-offset-2' : ''
+																	]">
+																<TruckIcon v-if="pending_order?.is_deliverable"
+																	class="-ml-0.5 h-5 w-5" aria-hidden="true" />
+																<BuildingStorefrontIcon v-else class="-ml-0.5 h-5 w-5"
+																	aria-hidden="true" />
+																{{
+																	[pending_order?.invoice_number.substr(6),
+																	pending_order?.table_name]
+																		.filter((n) => n)
+																		.join(' - ')
+																}}
+																<CheckIcon v-if="pending_order?.is_printed"
+																	class="-mr-0.5 h-5 w-5" aria-hidden="true" />
+																</Link>
+															</div>
+														</li>
+													</ul>
+												</div>
+											</div>
+										</aside>
+
+										<!-- Category mobile -->
+										<div class="xl:hidden shrink-0 w-full relative z-0 focus:outline-none">
+											<nav class="flex-1 min-h-0" aria-label="Directory">
+												<div class="relative">
+													<ul role="list" class="flex relative z-0 overflow-x-auto">
+														<li v-for="(category, index) in categories" :key="index"
+															@click="filterCategory = filterCategory ? null : category.id"
+															:class="[
+																filterCategory == category.id
+																	? 'bg-indigo-500 text-white'
+																	: 'hover:bg-stone-100 text-stone-900',
+																'relative px-2 py-3 flex items-center'
+															]">
+															<div class="flex-1 min-w-0">
+																<button type="button" class="focus:outline-none">
+																	<span class="absolute inset-0"
+																		aria-hidden="true"></span>
+																	<p
+																		class="px-2 whitespace-nowrap text-sm leading-4 font-medium capitalize">
+																		{{ category.name }}
+																	</p>
+																</button>
+															</div>
+														</li>
+													</ul>
+												</div>
+											</nav>
+										</div>
+
+										<div class="flex-1 h-full overflow-y-auto py-2">
+											<h2 class="sr-only">All Products</h2>
+											<div
+												class="absolute bottom-0 flex justify-center gap-2 z-10 mb-6 w-full text-center">
+												<div class="isolate inline-flex rounded-md shadow-lg shadow-indigo-500/40">
+													<button type="button" @click="userSetting.set('table')" :class="[
+														userSetting.posLayout == 'table' ? 'bg-indigo-600' : 'bg-indigo-500',
+														'rounded-l-md px-3.5 py-2 text-sm font-semibold text-white hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
+													]">
+														Table
+													</button>
+													<button type="button" @click="userSetting.set('grid')" :class="[
+														userSetting.posLayout == 'grid' ? 'bg-indigo-600' : 'bg-indigo-500',
+														'-ml-px rounded-none px-3.5 py-2 text-sm font-semibold text-white hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
+													]">
+														Card
+													</button>
+													<button type="button" @click="userSetting.set('box')" :class="[
+														userSetting.posLayout == 'box' ? 'bg-indigo-600' : 'bg-indigo-500',
+														'-ml-px rounded-r-md px-3.5 py-2 text-sm font-semibold text-white hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
+													]">
+														Box
+													</button>
+												</div>
+											</div>
+
+											<div v-if="loading">
+												<div class="h-64 flex justify-center items-center">
+													<div
+														class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-gray-600 transition ease-in-out duration-150">
+														<svg class="animate-spin -ml-1 mr-3 h-5 w-5"
+															xmlns="http://www.w3.org/2000/svg" fill="none"
+															viewBox="0 0 24 24">
+															<circle class="opacity-25" cx="12" cy="12" r="10"
+																stroke="currentColor" stroke-width="4"></circle>
+															<path class="opacity-75" fill="currentColor"
+																d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+															</path>
+														</svg>
+														Processing...
+													</div>
+												</div>
+											</div>
+
+											<div v-else-if="filteredProducts.length > 0" class="w-full">
+												<table v-if="userSetting.posLayout == 'table'"
+													class="w-full transition-all">
+													<tbody>
+														<tr v-for="(product, index) in filteredProducts" :key="product.id"
+															:class="[index % 2 == 1 ? 'bg-white' : 'bg-stone-100', 'hover:bg-primary-50']">
+															<td>
+																<h3 @click=";[addMenuItem(product.id)]" :class="[
+																	product.rate ? 'text-stone-700 cursor-pointer' : 'text-red-700',
+																	'flex items-start justify-start capitalize whitespace-wrap text-base font-fancy px-3 py-2'
+																]" :title="product.name">
+																	{{ product.name }}
+																</h3>
+															</td>
+															<td class="w-28 text-right text-stone-700">
+																<span class="px-3 font-normal text-sm tracking-wider"><span
+																		class="tracking-tighter text-xs">TK</span> {{
+																			product.rate }}</span>
+															</td>
+														</tr>
+													</tbody>
+												</table>
+												<div v-else-if="userSetting.posLayout == 'grid'"
+													class="mt-2 px-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3 transition-all">
+													<div v-for="product in filteredProducts" :key="product.id"
+														class="relative">
+														<div @click=";[addMenuItem(product.id)]" :class="[
+															product.current
+																? 'ring-2 ring-offset-2 ring-primary-500'
+																: 'focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-stone-100 focus-within:ring-primary-500',
+															'flex gap-4 px-3 pl-5 py-3 group w-full border border-stone-200 rounded-lg overflow-hidden shadow cursor-pointer'
+														]">
+															<div class="flex-1 flex flex-col">
+																<h3 :class="['capitalize whitespace-wrap font-fancy text-base text-indigo-600 text-left']"
+																	:title="product.name">
+																	{{ product.name }}
+																</h3>
+
+																<p
+																	class="mt-2 text-sm tracking-widest text-stone-600 pointer-events-none flex justify-between">
+																	<span class="px-0 font-normal text-sm tracking-wider">
+																		<span class="tracking-tighter text-xs">TK</span> {{
+																			product.rate }}
+																	</span>
+																</p>
+															</div>
+															<p :class="[
+																'w-24 h-24 px-2 py-1 flex items-center justify-center uppercase font-semibold whitespace-wrap text-center text-sm font-fancy bg-stone-50 text-secondary-300 select-none overflow-hidden'
+															]" :title="product.name">
+																{{ product.name }}
+															</p>
+														</div>
+													</div>
+												</div>
+												<ul v-else role="list"
+													class="px-4 py-2 grid gap-4 grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 transition-all">
+													<li v-for="product in filteredProducts" :key="product.id"
+														@click=";[addMenuItem(product.id)]" class="relative">
+														<button type="button" :title="product.name" :class="[
+															'flex items-center gap-x-1.5 w-full h-28 rounded-md px-3 py-2 text-sm font-semibold shadow border focus:outline-none focus:ring-2 focus:ring-offset-2',
+															product.rate
+																? 'text-stone-600 bg-stone-100 hover:bg-stone-50 border-stone-200 focus:ring-offset-stone-50 focus:ring-stone-400'
+																: 'text-yellow-700 bg-yellow-100 hover:bg-yellow-50 border-yellow-200 focus:ring-offset-yellow-50 focus:ring-yellow-400'
+														]">
+															<h3 :class="[
+																'w-full flex items-center justify-center capitalize whitespace-wrap font-fancy select-none',
+																boxTextSize(product.name)
+															]">
+																{{ product.name }}
+															</h3>
+														</button>
+														<p
+															class="flex items-center justify-between mt-2 text-sm tracking-wide text-stone-600 pointer-events-none">
+															<span class="px-0 font-normal text-sm tracking-wider">
+																<span class="tracking-tighter text-xs">TK</span> {{
+																	product.rate }}
+															</span>
+														</p>
+													</li>
+												</ul>
+
+												
+											</div>
+											<div v-else-if="filterCategory != 'top_sold'" class="rounded-md p-4">
+												<div class="h-20 flex justify-center items-center">
+													<div
+														class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm text-red-600 transition ease-in-out duration-150">
+														<ExclamationTriangleIcon class="-ml-1 mr-2 h-5 w-5"
+															aria-hidden="true" />
+														Product not found
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</section>
+							</div>
+						</div>
+					</section>
+				</main>
+
+				<!-- w-96 lg:w-2/5 overflow-y-auto border-l border-stone-200 bg-white block z-0 -->
+				<!-- Secondary column (hidden on smaller screens) -->
+				<aside class="w-1/2 sm:w-96 overflow-y-auto border-l border-gray-200 bg-white px-0 block">
+					<form @submit.prevent="submit"
+						class="flex flex-col relative w-full h-full min-h-screen divide-y divide-stone-200">
+						<div class="flex w-full shrink-0 h-12 bg-white shadow-sm">
+							<div class="flex justify-center items-center w-full px-4">
+								<div class="flex-1 py-2 hidden sm:flex sm:justify-between sm:items-center">
+									<div class="flex items-center gap-x-2">
+										<h3 class="">Cart Items</h3>
+										<a v-if="form.group_items.length" @click="resetForm()" href="#" title="Reset"
+											class="text-sm font-medium text-blue-600 hover:text-blue-500 border-b border-dashed border-blue-500 leading-4 hover:border-solid">
+											Reset
+										</a>
+									</div>
+									<div class="relative text-gray-400 focus-within:text-gray-600">
+										<Menu as="div" class="relative">
+											<div>
+												<MenuButton
+													class="max-w-xs bg-white rounded-full border border-gray-300 flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 py-1 lg:p-2 lg:rounded-md lg:hover:bg-gray-50">
+													<span class="ml-2 text-gray-700 text-sm font-medium lg:block">
+														<span class="sr-only">Open user menu for </span>{{
+															currentBranch.name }}
+													</span>
+													<ChevronUpDownIcon class="shrink-0 ml-1 h-5 w-5 text-gray-400 lg:block"
+														aria-hidden="true" />
+												</MenuButton>
+											</div>
+											<transition enter-active-class="transition ease-out duration-100"
+												enter-from-class="transform opacity-0 scale-95"
+												enter-to-class="transform opacity-100 scale-100"
+												leave-active-class="transition ease-in duration-75"
+												leave-from-class="transform opacity-100 scale-100"
+												leave-to-class="transform opacity-0 scale-95">
+												<MenuItems
+													class="z-10 origin-top-right absolute right-0 mt-2 w-32 lg:w-40 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
+													<MenuItem v-for="branch_item in page.props.branches" :key="branch_item.id" v-slot="{ active, close }">
+														<button
+															type="button"
+															@click=";[close, setBranch(branch_item.id)]"
+															:class="[
+																active || branch_item.id == form.branch_id ? 'bg-gray-100' : '',
+																'block px-4 py-2 text-sm text-gray-700 w-full text-left'
+															]">
+															{{ branch_item.name }}
+														</button>
+													</MenuItem>
+												</MenuItems>
+											</transition>
+										</Menu>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div :class="[
+							'flex-1 flex flex-col w-full overflow-y-auto shrink-0 divide-y-2',
+							form.order_id ? 'divide-blue-500' : 'divide-stone-500/40'
+						]">
+							<section
+								:class="['w-full h-full text-stone-700', form.order_id ? 'bg-blue-100/10' : 'bg-stone-50']">
+								<div
+									:class="['flex flex-col max-h-80 overflow-y-auto divide-y', form.order_id ? 'divide-blue-100' : 'divide-stone-200']">
+									<div v-for="(group_item, index) in form.group_items" :key="index"
+										class="py-2 px-3 flex flex-col font-medium sm:text-sm space-y-1">
+										<div class="text-sm leading-5 font-semibold capitalize">
+											{{ index + 1 + '. ' + group_item.product_name }}
+										</div>
+										<div class="flex justify-center items-center">
+											<div
+												class="inline-flex text-sm font-normal leading-5 text-stone-600 text-right sm:text-left">
+												TK {{ group_item.rate }}
+											</div>
+											<div class="ml-auto flex items-center rounded-md space-x-2">
+												<button type="button" @click="
+																								                                                        ;[subMenuItem(group_item.product_id), group_item.quantity <= 0 ? form.group_items.splice(index, 1) : '']
+													" class="inline-flex items-center w-auto h-8 px-1 py-1 text-inherit rounded hover:shadow-md">
+													<MinusSmallIcon v-if="group_item.quantity > 1" class="h-5 w-5"
+														aria-hidden="true" />
+													<TrashIcon v-else class="h-5 w-5 text-red-600" aria-hidden="true" />
+												</button>
+
+												<input v-model="group_item.quantity" @change="calc()" @keyup="calc()"
+													type="text"
+													class="px-1 py-1 h-8 w-10 rounded-none text-center sm:text-base font-normal border-transparent focus:ring-indigo-500 focus:border-indigo-500" />
+
+												<button type="button" @click=";[addMenuItem(group_item.product_id)]"
+													class="inline-flex items-center w-auto h-8 px-1 py-1 text-inherit rounded hover:shadow-md">
+													<PlusSmallIcon class="h-5 w-5" aria-hidden="true" />
+												</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</section>
+
+							<section class="inline-block min-w-full align-middle">
+								<div class="bg-white divide-y divide-stone-200">
+									<div class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">{{
+											form.group_items.length }} Items</div>
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											{{ form.group_items.reduce((carry, val) => carry + Number(val.quantity), 0) }}
+											Units
+										</div>
+										<div class="py-2 whitespace-nowrap sm:text-lg text-stone-500 text-right">
+											<div class="">{{ form.sub_total }}</div>
+										</div>
+									</div>
+
+									<!-- <div v-if="page.props.module.discount" class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">Member Code
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left col-span-2">
+											<div class="relative">
+												<input v-model="form.member_code"
+													placeholder="Member Code" type="text" autocomplete="off" :class="[
+														'block w-full px-4 text-left text-xs sm:text-sm border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 focus:bg-transparent rounded'
+													]" />
+												<span
+													class="absolute py-1.5 px-2 sm:py-2 top-0 right-0 m-px sm:px-2 rounded-r-md border-l border-stone-300 bg-stone-100">
+													<EllipsisHorizontalIcon v-if="!checkingMember.message"
+														:class="['h-5 w-5']" aria-hidden="true" />
+													<XMarkIcon v-else-if="!checkingMember.success" :class="['h-5 w-5']"
+														aria-hidden="true" />
+													<CheckIcon v-else :class="['h-5 w-5']" aria-hidden="true" />
+												</span>
+											</div>
+											<p
+												:class="['mt-1 font-medium', checkingMember.success ? 'text-green-600' : 'text-red-600']">
+												{{ checkingMember.message }}
+											</p>
+										</div>
+									</div> -->
+
+									<!-- member code hide for cnc only
+									<div class="px-3 grid grid-cols-3 gap-1 text-xs" style="visibility: hidden;">
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											Member Code
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left col-span-2">
+											<div class="relative">
+												<input v-model="form.member_code" @keyup="checkDiscount()" placeholder="Member Code" type="text" autocomplete="off" :class="['block w-full px-4 text-left text-xs sm:text-sm border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 focus:bg-transparent rounded']">
+												<span class="absolute py-1.5 px-2 sm:py-2 top-0 right-0 m-px sm:px-2 rounded-r-md border-l border-stone-300 bg-stone-100">
+													<EllipsisHorizontalIcon v-if="!checkingMember.message" :class="['h-5 w-5']" aria-hidden="true" />
+													<XMarkIcon v-else-if="!checkingMember.success" :class="['h-5 w-5']" aria-hidden="true" />
+													<CheckIcon v-else :class="['h-5 w-5']" aria-hidden="true" />
+												</span>
+											</div>
+											<p :class="['mt-1 font-medium', checkingMember.success ? 'text-green-600' : 'text-red-600']">{{ checkingMember.message }}</p>
+										</div>
+									</div> -->
+
+									<div v-if="!isWaiter" class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">Discount
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											<Listbox class="w-full" v-model="form.discount_type" :items="discountTypes"
+												:hideIcon="true" />
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											<input id="discount_rate" v-model="form.discount_rate" @keyup="calc()"
+												:placeholder="[form.discount_type == 'percent' ? 'Rate %' : 'Amount']"
+												type="text"
+												oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+												autocomplete="off" :class="[
+													'block w-full px-4 text-left text-xs sm:text-sm border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 focus:bg-transparent rounded'
+												]" />
+										</div>
+									</div>
+
+									<div v-if="!isWaiter && form.discount_type == 'percent' && Number(form.discount_rate) > 0"
+										class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">Amount</div>
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">{{
+											form.discount_rate }}%</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											<input id="discount_amount" v-model="form.discount_amount" readonly
+												placeholder="Discount" type="text"
+												oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+												autocomplete="off" :class="[
+													'block w-full px-4 text-left text-xs sm:text-sm bg-stone-100 border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 rounded'
+												]" />
+										</div>
+									</div>
+
+									<div v-if="form.service_cost > 0" class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">Service Cost
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left col-span-2">
+											<input id="service_cost" v-model="form.service_cost" readonly
+												placeholder="Service Cost" type="text"
+												oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+												autocomplete="off" :class="[
+													'block w-full px-4 text-left text-xs sm:text-sm bg-stone-100 border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 rounded'
+												]" />
+										</div>
+									</div>
+
+									<div v-if="!isWaiter" class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											<div class="text-left">
+												VAT <span>({{ form.vat_rate }}%)</span>
+											</div>
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											<input id="vat_amount" v-model="form.vat_amount" @keyup="calc()" readonly
+												placeholder="VAT" type="text"
+												oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+												autocomplete="off" :class="[
+													'block w-full px-4 text-left text-xs sm:text-sm bg-stone-100 border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 rounded'
+												]" />
+										</div>
+										<div class="py-2 whitespace-nowrap sm:text-lg text-stone-500 text-left">
+											<div class="text-right">{{ form.total }}</div>
+										</div>
+									</div>
+
+									<div v-if="!isWaiter" class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left col-span-2">
+											<input id="cash" v-model="form.cash" @click="modalOpen = !modalOpen" readonly
+												placeholder="Amount" type="text"
+												oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+												autocomplete="off" :class="[
+													Number(form.cash) >= Number(form.total)
+														? 'ring-green-400 focus:ring-green-400'
+														: 'ring-red-400 focus:ring-red-400',
+													'block w-full px-4 border-none text-left text-xs sm:text-sm ring-2 hover:bg-stone-100 focus:ring-2 focus:bg-transparent focus:outline-none rounded-md'
+												]" />
+										</div>
+										<div class="py-2 whitespace-nowrap sm:text-lg text-stone-500 text-left">
+											<div
+												:class="[Number(form.change) < 0 ? 'text-red-500' : 'text-stone-700', 'text-right']">
+												{{ form.change }}
+											</div>
+										</div>
+									</div>
+
+									<div class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left col-span-2">
+											<div class="relative">
+												<span
+													class="absolute py-1.5 px-2 sm:py-2 top-0 left-0 m-px sm:px-2 rounded-l-md border-r border-stone-300 bg-stone-100">
+													+88
+												</span>
+												<input id="customer_mobile" v-model="form.customer_mobile"
+													@keyup="selectCustomer" placeholder="Customer Mobile"
+													autocomplete="newPassword" type="text" :class="[
+														'pl-14',
+														'block w-full px-4 text-left text-xs sm:text-sm border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 focus:bg-transparent rounded'
+													]" />
+											</div>
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											<input id="customer_name" v-model="form.customer_name" placeholder="Name"
+												type="text" :class="[
+													'block w-full px-4 text-left text-xs sm:text-sm border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 focus:bg-transparent rounded'
+												]" />
+										</div>
+
+
+									</div>
+									<p :class="['mt-1 font-medium', checkingEligibility.success ? 'text-green-600' : 'text-red-600']">{{ checkingEligibility.message }}</p>
+
+
+
+									<div v-show="page.props.module.delivery && order?.order_delivery"
+										class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-1 whitespace-nowrap sm:text-lg text-stone-500 text-left col-span-3">
+											<textarea id="delivery_address" v-model="form.delivery_address" rows="1"
+												placeholder="Address" :class="[
+													'block w-full px-4 text-left text-xs sm:text-sm border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 focus:bg-transparent rounded'
+												]">
+                                            </textarea>
+										</div>
+									</div>
+
+									<div v-if="!isWaiter" class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">Served By
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left col-span-2">
+											<Listbox class="" position="top" v-model="form.waiter_id" :items="waiters" />
+										</div>
+									</div>
+
+									<div class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											<Listbox class="" position="top" v-model="form.dine_type" :items="dineTypes"
+												:hideIcon="true" />
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											<input id="guest_number" v-model="form.guest_number" placeholder="No. of Guests"
+												:required="form.dine_type == 'dine-in'" type="text"
+												oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+												autocomplete="off" :class="[
+													'block w-full px-4 text-left text-xs sm:text-sm border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 focus:bg-transparent rounded'
+												]" />
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-lg text-stone-500 text-left">
+											<Listbox class="" position="top" v-model="form.table" :items="tables"
+												:hideIcon="true" />
+										</div>
+									</div>
+
+									<div class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-1 whitespace-nowrap sm:text-lg text-stone-500 text-left col-span-3">
+											<input id="note" v-model="form.note" placeholder="Note" type="text" :class="[
+												'block w-full px-4 text-left text-xs sm:text-sm border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 focus:bg-transparent rounded'
+											]" />
+										</div>
+									</div>
+
+									<div v-if="updatable" class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-1 whitespace-nowrap sm:text-lg text-stone-500 text-left col-span-3">
+											<input v-model="form.date_time" type="datetime-local" :class="[
+												'block w-full px-4 text-left text-xs sm:text-sm border-stone-300 focus:ring-primary-400 focus:border-primary-400 hover:bg-stone-100 focus:bg-transparent rounded'
+											]" />
+										</div>
+									</div>
+
+									<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left" style="margin-left: 20px;">
+										<label>
+										<input type="checkbox" v-model="form.vat_add" id="vat_add" />
+										Tick for presence
+										</label>
+									</div>
+									<div v-if="order?.is_deliverable && page.props.module.delivery"
+										class="px-3 grid grid-cols-3 gap-1 text-xs">
+										<div class="py-3 whitespace-nowrap sm:text-sm text-stone-500 text-left">Rider</div>
+										<div class="py-1 whitespace-nowrap sm:text-sm text-stone-500 text-left">
+											<Listbox class="" position="top" v-model="form.rider_id" :items="riders"
+												:hideIcon="true" />
+										</div>
+										<div class="py-1 whitespace-nowrap sm:text-lg text-stone-500 text-left">
+											<Listbox class="" position="top" v-model="form.status" :items="statuses"
+												:hideIcon="true" />
+										</div>
+									</div>
+								</div>
+							</section>
+						</div>
+
+						<div class="h-14 py-2 px-4">
+							<div class="flex items-center justify-between">
+								<div class="flex-shrink-0 flex space-x-3">
+									<button type="submit" :disabled="form.processing"
+										class="inline-flex items-center gap-x-1.5 rounded-md bg-green-500 px-3 py-2 text-sm font-semibold text-green-50 shadow-sm hover:bg-green-600 border border-green-500">
+										<CheckIcon class="hidden sm:block -ml-0.5 h-5 w-5" aria-hidden="true" />
+										<span v-if="updatable"> Update </span>
+										<span v-else> Place Order </span>
+									</button>
+								</div>
+
+								<button v-if="printable"
+									@click="printWindow()" type="button"
+									class="inline-flex items-center gap-x-1.5 rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-100 border border-blue-100">
+									<PrinterIcon class="hidden sm:block -ml-0.5 h-5 w-5" aria-hidden="true" />
+									Print
+								</button>
+							</div>
+						</div>
+
+
+  <!-- Trigger Button -->
+  <!-- <button type="button" class="btn btn-primary" @click="showModal = true">
+      Offer Loyalty Card
+    </button> -->
+
+    <!-- Modal -->
+    <div v-if="showModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2 class="modal-title">Have you give Loyalty Card to Customer?</h2>
+        <div class="modal-buttons">
+          <button @click="handleYes" class="btn btn-success">Yes</button>
+          <button @click="handleNo" class="btn btn-danger">No</button>
+        </div>
+      </div>
+    </div>
+
+
+
+					</form>
+				</aside>
+			</div>
+		</div>
+
+		<TransitionRoot as="template" :show="modalOpen">
+			<Dialog as="div" class="relative z-10" @close="modalOpen = false">
+				<TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100"
+					leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
+					<div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+				</TransitionChild>
+
+				<div class="fixed inset-0 z-10 overflow-y-auto">
+					<div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+						<TransitionChild as="template" enter="ease-out duration-300"
+							enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+							enter-to="opacity-100 translate-y-0 sm:scale-100" leave="ease-in duration-200"
+							leave-from="opacity-100 translate-y-0 sm:scale-100"
+							leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+							<DialogPanel
+								class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+								<div class="absolute right-0 top-0 hidden pr-4 pt-4 sm:block">
+									<button type="button"
+										class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+										@click="modalOpen = false">
+										<span class="sr-only">Close</span>
+										<XMarkIcon class="h-6 w-6" aria-hidden="true" />
+									</button>
+								</div>
+								<div class="sm:flex sm:items-start">
+									<div class="w-full mt-3 text-center sm:mt-0 sm:text-left">
+										<DialogTitle as="h3" class="text-lg font-semibold leading-6 text-gray-900">
+											Payment Amount -/ {{ form.total }}
+										</DialogTitle>
+										<div v-if="customer" class="mt-2">
+											<dl class="mt-6 flex flex-col sm:mt-1">
+												<dd class="text-sm text-gray-500">
+													<div class="flex flex-start">
+														<div class="w-1/3 text-sm font-normal">Customer Name</div>
+														<div class="w-2/3 font-medium text-gray-700">: {{ form.customer_name
+														}}</div>
+													</div>
+													<div class="flex flex-start">
+														<div class="w-1/3 text-sm font-normal">Customer Mobile</div>
+														<div class="w-2/3 font-medium text-gray-700">: {{
+															form.customer_mobile }}</div>
+													</div>
+													<div v-if="page.props.module.token > 0" class="flex flex-start">
+														<div class="w-1/3 text-sm font-normal">Available Token</div>
+														<div class="w-2/3 font-medium text-gray-700">
+															<div class="flex items-center">
+																: {{ customer?.balance }} <span
+																	class="uppercase text-gray-500 ml-1">token</span>
+																<ArrowsRightLeftIcon class="mx-2 h-5 w-5 text-gray-800"
+																	aria-hidden="true" />
+																{{ totalTokenAmount }} <span
+																	class="uppercase text-gray-500 ml-1">bdt</span>
+															</div>
+														</div>
+													</div>
+												</dd>
+											</dl>
+										</div>
+										<table class="mt-4 min-w-full divide-y divide-gray-300">
+											<thead class="divide-y divide-gray-200 bg-white">
+												<tr>
+													<th scope="col"
+														class="w-1/2 whitespace-nowrap py-2 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">
+														Total Amount
+													</th>
+													<th scope="col"
+														class="whitespace-nowrap px-2 py-0.5 text-left text-sm font-medium text-gray-900">
+														<div :class="[
+															'block w-full px-0 py-0 text-left text-sm sm:text-2xl border-transparent rounded focus:ring-gray-400 focus:border-gray-400 focus:bg-transparent',
+															Number(form.cash) >= Number(form.total) ? 'text-green-600' : 'text-red-600'
+														]">
+															{{ form.cash }}
+														</div>
+													</th>
+												</tr>
+												<tr v-if="page.props.module.token > 0 && customer">
+													<td scope="col"
+														class="w-1/2 whitespace-nowrap py-2 pl-4 pr-3 text-left text-sm text-gray-500 sm:pl-0">
+														<div class="flex justify-between">
+															Token Used
+															<input type="checkbox" id="use-token" @change="payAmount"
+																v-model="form.token_use"
+																class="group-checkbox form-checkbox w-5 h-5 focus:ring-primary-600 focus:border-primary-600 text-primary-600 transition duration-150 ease-in-out rounded select-none cursor-pointer" />
+														</div>
+													</td>
+													<td scope="col"
+														class="whitespace-nowrap px-2 py-1 text-left text-sm text-gray-900">
+														<div v-if="form.token_use"
+															class="flex items-center font-normal text-gray-700">
+															{{ form.token * settingTokenValue }} <span
+																class="uppercase text-gray-500 ml-1">token</span>
+															<ArrowsRightLeftIcon class="mx-2 h-5 w-5 text-gray-800"
+																aria-hidden="true" />
+															{{ form.token }} <span
+																class="uppercase text-gray-500 ml-1">bdt</span>
+														</div>
+													</td>
+												</tr>
+											</thead>
+											<tbody class="divide-y divide-gray-200 bg-white">
+												<tr v-for="method in form.group_methods" :key="method.id">
+													<td class="whitespace-nowrap py-2 pl-4 pr-3 text-sm sm:pl-0">
+														<p :style="displayStyle(method)">
+															{{ method.name }}
+														</p>
+													</td>
+													<td class="whitespace-nowrap px-2 py-1 text-sm text-gray-500">
+														<input type="text" v-model="method.amount" @keyup="payAmount"
+															oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+															class="block w-full px-2 py-1.5 text-left text-xs sm:text-sm border-stone-300 focus:ring-gray-400 focus:border-gray-400 hover:bg-stone-100 focus:bg-transparent rounded" />
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+								</div>
+							</DialogPanel>
+						</TransitionChild>
+					</div>
+
+				</div>
+			</Dialog>
+		</TransitionRoot>
+	</div>
+
+	<div v-if="printable" class="hidden print:block">
+		<Receipt :order="order" />
+	</div>
+</template>

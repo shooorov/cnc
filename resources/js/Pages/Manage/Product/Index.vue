@@ -1,0 +1,282 @@
+<script setup>
+import { reactive, onMounted, computed } from 'vue';
+import { router, Head, Link } from '@inertiajs/vue3';
+import {
+	PlusIcon,
+	CogIcon,
+	MagnifyingGlassIcon,
+	ArrowPathIcon,
+} from '@heroicons/vue/24/solid';
+import {
+	PencilSquareIcon,
+	TrashIcon,
+} from '@heroicons/vue/24/outline';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Breadcrumb from '@/Components/Breadcrumb.vue';
+import Alert from '@/Components/Alert.vue';
+import Combobox from '@/Components/Combobox.vue';
+
+const props = defineProps({
+	string_change: Object,
+	products: Array,
+	categories: Array,
+	filter: Object,
+})
+
+onMounted(() => {
+	$('#table').DataTable({
+		lengthProduct: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+		length: 10,
+		dom: "<'flex justify-center sm:justify-end mb-3'B><'flex flex-col sm:flex-row justify-between'lf><'block overflow-auto'rt><'flex flex-col sm:flex-row justify-between'ip>",
+		buttons: [
+			'copy', 'excel'
+		],
+	});
+})
+
+const destroy = (route, message = "Are you sure you want to delete?") => {
+	if (confirm(message)) { router.delete(route); }
+}
+
+const form = reactive({
+	end_date: props.filter.end_date,
+	start_date: props.filter.start_date,
+	category_id: props.filter.category_id,
+})
+
+const clearFilter = () => {
+    for (const [key, value] of Object.entries(form)) {
+        form[key] = ''
+    }
+}
+
+const submit = () => {
+	router.visit(route('product.index'), {
+		data: form,
+	});
+}
+
+const breadcrumbs = [
+	{ name: props.string_change.product_s, href: route('product.index'), current: false },
+	{ name: 'List Page', href: '#', current: false },
+];
+</script>
+<style scoped>
+.green-button {
+  background-color: green;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+.red-button {
+  background-color: red;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+</style>
+<template>
+	<Head title="Products" />
+
+	<AuthenticatedLayout>
+		<div class="bg-white shadow">
+			<div class="px-4 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
+				<div class="py-6 md:flex md:items-center md:justify-between lg:border-t lg:border-gray-200">
+					<div class="flex-1 min-w-0">
+						<Breadcrumb :breadcrumbs="breadcrumbs" />
+					</div>
+					<div class="mt-6 h-9 flex space-x-3 md:mt-0 md:ml-4">
+						<Link :href="route('product.create')"
+							class="inline-flex items-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-primary-400">
+						<PlusIcon class="-ml-1 mr-2 h-5 w-5 text-gray-400" aria-hidden="true" />
+						Create
+						</Link>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="py-5">
+			<div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
+				<div class="bg-white shadow sm:rounded-lg">
+					<div
+						class="flex flex-col sm:flex-row sm:justify-between items-center px-4 py-5 border-b border-gray-200 sm:px-8">
+						<div class="flex-1">
+							<h3 class="text-base font-semibold leading-6 text-gray-900">{{ string_change.product_s }}</h3>
+							<p class="mt-1 text-sm text-gray-500">
+							</p>
+						</div>
+						<div class="flex-shrink-0 flex space-x-3">
+							<Link :href="route('product_category.specification')"
+								class="inline-flex items-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-primary-400">
+							<CogIcon class="-ml-1 mr-2 h-5 w-5 text-gray-400" aria-hidden="true" />
+							Specification
+							</Link>
+						</div>
+					</div>
+
+					<Alert />
+
+					<form @submit.prevent="submit">
+						<dl class="px-5 py-5 mx-auto max-w-5xl">
+							<div class="py-2 sm:grid sm:grid-cols-8 sm:gap-4">
+								<dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+									<label class="block text-sm font-medium text-gray-700">Category</label>
+									<Combobox class="mt-1" v-model="form.category_id" :items="categories" />
+								</dd>
+
+								<dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+									<label class="block text-sm font-medium text-gray-700">Action</label>
+									<div class="inline-flex mt-1 rounded" role="group">
+										<button
+											type="submit"
+											class="inline-flex items-center px-4 py-2 border border-transparent rounded-l shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600">
+											<MagnifyingGlassIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+											Search
+										</button>
+
+										<button
+											@click="clearFilter"
+											class="inline-flex items-center px-4 py-1 border border-primary-600 rounded-r shadow-sm text-sm font-medium text-primary-700 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600">
+											<ArrowPathIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+											Clear
+										</button>
+									</div>
+								</dd>
+							</div>
+						</dl>
+					</form>
+
+					<table class="table-auto sm:table-fixed min-w-full w-full" id="table">
+						<thead>
+							<tr>
+								<th
+									class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">
+									S.N.</th>
+								<th
+									class="w-20 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">
+									code</th>
+								<th
+									class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">
+									Name</th>
+								<th
+									class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">
+									Category</th>
+								<th
+									class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">
+									{{ string_change.product }} Cost</th>
+								<th
+									class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">
+									Margin</th>
+								<!-- <th v-show="false"
+									class="w-64 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">
+									{{ string_change.item_s }}</th> -->
+								<th
+								
+									class="w-28 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">
+									status</th>
+								<th
+								    
+									class="w-28 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">
+									Action</th>
+							</tr>
+						</thead>
+						<tbody class="bg-white">
+							<tr v-for="(product, index) in products" :key="product.id"
+								:class="[index % 2 == 0 ? 'bg-white' : 'bg-gray-50', 'border-b']">
+								<td class="p-2 text-center"> {{ Number(index) + 1 }} </td>
+
+								<td class="px-3 py-1 whitespace-wrap break-words">
+									{{ product.code }}
+								</td>
+
+								<td class="px-3 py-1 whitespace-wrap break-words">
+									<!-- <div class="flex items-center">
+										<div class="shrink-0 h-10 w-10 mr-4">
+                                            <img class="h-10 w-10 rounded-full" :src="product.image" alt="" />
+                                        </div>
+										<div>
+											<div class="text-sm leading-5 font-semibold text-gray-700">
+												{{ product.name }}
+											</div>
+										</div>
+									</div> -->
+									{{ product.name }}
+								</td>
+
+								<td class="px-3 py-1 whitespace-wrap break-words">
+									{{ product.category_name }}
+								</td>
+
+								<td class="px-3 py-1 whitespace-wrap break-words">
+									&#2547; {{ product.rate }}
+								</td>
+
+								<td class="px-3 py-1 whitespace-wrap break-words">
+									<div class="text-sm leading-5 text-gray-700">
+										{{ product.margin_amount }} {{ product.margin_percent ? "(" + product.margin_percent + "%)" : "" }}
+									</div>
+								</td>
+
+								<!-- <td v-show="false" class="p-2 whitespace-nowrap">
+									<table class="table-auto min-w-full text-xs divide-y divide-gray-300">
+										<tbody class="bg-transparent border divide-y divide-gray-300">
+											<tr>
+												<th class="px-2 py-1 border border-gray-300 w-5">#</th>
+												<th class="px-2 py-1 border border-gray-300">{{ string_change.item }}</th>
+												<th class="px-2 py-1 border border-gray-300 w-14">Qty</th>
+											</tr>
+											<tr v-for="(item, key) in product.group_items" :key="item.id">
+												<td class="px-2 py-1 border border-gray-300 text-center">{{ (key + 1) }}
+												</td>
+												<td class="px-2 py-1 border border-gray-300 text-center">{{ item.item_name
+												}}</td>
+												<td class="px-2 py-1 border border-gray-300 text-center">{{
+													item.quantity_use + ' ' + item.unit_use }}</td>
+											</tr>
+										</tbody>
+									</table>
+								</td> -->
+								<td 
+								style="text-align: right"
+								class="px-3 py-1 whitespace-wrap break-words">
+									<!-- {{ product.status }} -->
+
+									<div>
+      <!-- Status Display with Conditional Button Styling -->
+      <button 
+        :class="{
+          'text-white bg-green-500 border-green-500 hover:bg-green-600 focus:ring-green-400': product.status === 'active',
+          'text-white bg-rose-500 border-rose-500 hover:bg-rose-600 focus:ring-rose-400': product.status === 'inactive'
+        }"
+        class="px-3 py-1 rounded border focus:outline-none focus:ring">
+        {{ product.status }}
+      </button>
+    </div>
+									<!-- <div class="flex-shrink-0 flex space-x-3">
+                            <div class="mt-4 shrink-0 flex">
+								<StatusOptions class="ml-3" as="button" :status="status_of_product" :items="statuses" :href="route('product.status.update', productId)"/>
+                            </div>
+                        </div> -->
+								</td>
+								<td class="px-3 py-1 whitespace-wrap break-words">
+									<div class="flex justify-end">
+										<Link :href="route('product.edit', product.id)"
+											class="text-indigo-600 hover:text-indigo-800 ml-3" title="edit">
+										<PencilSquareIcon class="w-6 h-6" aria-hidden="true" />
+										</Link>
+										<button @click="destroy(route('product.destroy', product.id))"
+											class="text-red-600 hover:text-red-800 ml-3" title="delete">
+											<TrashIcon class="w-6 h-6" aria-hidden="true" />
+										</button>
+									</div>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</AuthenticatedLayout>
+</template>
