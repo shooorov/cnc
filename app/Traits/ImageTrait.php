@@ -9,12 +9,18 @@ use Illuminate\Support\Str;
 
 trait ImageTrait
 {
-    protected $default_image = '/img/avatar.jpg';
-
-    protected $directory = 'images';
+    /**
+     * Default fallback image.
+     */
+    protected string $default_image = '/img/avatar.jpg';
 
     /**
-     * Get the Model's image.
+     * Directory to store images.
+     */
+    protected string $directory = 'images';
+
+    /**
+     * Get the model's latest image.
      */
     public function latest_image()
     {
@@ -22,7 +28,7 @@ trait ImageTrait
     }
 
     /**
-     * Get all of the Model's images.
+     * Get all of the model's images. also storing
      */
     public function images()
     {
@@ -30,7 +36,7 @@ trait ImageTrait
     }
 
     /**
-     * Get the Model's image.
+     * Get the model's default image URL.
      */
     public function defaultImageUrl(): Attribute
     {
@@ -38,19 +44,18 @@ trait ImageTrait
     }
 
     /**
-     * Get the image url.
-     *
-     * @return \Illuminate\Database\Eloquent\Casts\Attribute
+     * Get the image URL.
      */
     public function imageUrl(): Attribute
     {
+        // Alternative thumbnail logic (keep for later use)
         // $path = null;
         // if ($this->latest_image && Storage::exists('thumbnails/' . $this->latest_image->path)) {
         //     $path = Storage::url('thumbnails/' . $this->latest_image->path);
         // }
 
-        $path = $this->latest_image && $this->latest_image?->path && Storage::disk('public')->exists($this->latest_image?->path)
-            ? Storage::disk('public')->url($this->latest_image->path)
+        $path = $this->latest_image?->path && Storage::disk('public')->exists($this->latest_image->path)
+            ? Storage::url($this->latest_image->path)
             : $this->default_image_url;
 
         return Attribute::get(fn() => $path);
@@ -58,37 +63,39 @@ trait ImageTrait
 
     /**
      * Store image to imageable.
-     *
-     * @return \Illuminate\Database\Eloquent\Casts\Attribute
      */
-    public function storeImage($imageFile): String
+    public function storeImage($imageFile): string
     {
-        $extension = $imageFile->extension();
-        $file_name = Str::random(16) . '.' . $extension;
-        $image_path = $imageFile->storeAs($this->directory, $file_name, 'public');
+        $imagePath = $imageFile->storeAs(
+            $this->directory,
+            Str::random(16) . '.' . $imageFile->extension(),
+            'public'
+        );
 
-        $image = new Image(['path' => $image_path]);
-        $this->images()->save($image);
-        return $image_path;
+        $this->images()->save(new Image(['path' => $imagePath]));
+
+        return $imagePath;
     }
 
     /**
      * Delete image from imageable.
      *
-     * @return \Illuminate\Database\Eloquent\Casts\Attribute
+     * By default, this does a "soft remove" by attaching a blank image path.
+     * Use the commented code below for a full hard delete (removes files).
      */
     public function destroyImage(): void
     {
+        // Hard delete all images (use if you want actual file removal):
         // foreach ($this->images as $image) {
-        // 	if (Storage::disk('public')->exists($image->path)) {
-        // 		unlink(Storage::disk('public')->path($image->path));
-        // 	}
-        // 	$image->delete();
+        //     if (Storage::disk('public')->exists($image->path)) {
+        //         unlink(Storage::disk('public')->path($image->path));
+        //     }
+        //     $image->delete();
         // }
 
-        if ($this->latest_image && !empty($this->latest_image?->path)) {
-            $image = new Image(['path' => ""]);
-            $this->images()->save($image);
+        // Default: keep record but blank out path (soft remove)
+        if ($this->latest_image?->path) {
+            $this->images()->save(new Image(['path' => '']));
         }
     }
 }

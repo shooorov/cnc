@@ -29,6 +29,14 @@
                         <div class="flex-shrink-0 flex space-x-3">
                             <div class="mt-4 shrink-0 flex">
                                 <StatusOptions class="ml-3" as="button" :status="status_of_product" :items="statuses" :href="route('product.status.update', productId)" />
+
+                                <button
+                                    type="button"
+                                    @click="submit"
+                                    class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                    <PencilSquareIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                                    Update
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -236,12 +244,12 @@
                                                     <button
                                                         @click="addPlatter()"
                                                         type="button"
-                                                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                                                         Add Item
                                                         <PlusIcon class="ml-2 -mr-0.5 h-4 w-4" aria-hidden="true" />
                                                     </button>
                                                 </th>
-                                                <th colspan="2" class="py-2 px-2 text-right text-base font-medium text-indigo-600">Regular Cost:</th>
+                                                <th colspan="2" class="py-2 px-2 text-right text-base font-medium text-primary-600">Regular Cost:</th>
                                                 <th class="py-2 px-1 text-right text-lg font-medium">{{ form.production_cost }}</th>
                                                 <th class="py-2 px-1 text-left text-lg font-medium">&#2547;</th>
                                             </tr>
