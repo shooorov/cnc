@@ -261,10 +261,10 @@ class OrderController extends Controller
             'recordsFiltered' => $recordsFiltered,
             'data'            => $records->map(function ($order) {
                 $actions = [];
-                $actions['print'] = RolePermission::isRouteValid('pos.print') ? route('pos.print', $order->id) : '';
-                $actions['detail'] = RolePermission::isRouteValid('order.show') ? route('order.show', $order->id) : '';
-                $actions['edit'] = UseBranch::id() && RolePermission::isRouteValid('pos.create') ? route('pos.create', $order->id) : '';
-                $actions['destroy'] = UseBranch::id() && RolePermission::isRouteValid('order.destroy') ? route('order.destroy', $order->id) : '';
+                $actions['print_url'] = RolePermission::isRouteValid('pos.print') ? route('pos.print', $order->id) : null;
+                $actions['detail_url'] = RolePermission::isRouteValid('order.show') ? route('order.show', $order->id) : null;
+                $actions['edit_url'] = UseBranch::id() && RolePermission::isRouteValid('pos.create') ? route('pos.create', $order->id) : null;
+                $actions['destroy_url'] = UseBranch::id() && RolePermission::isRouteValid('order.destroy') ? route('order.destroy', $order->id) : null;
                 return [
                     'id'                    => $order->id,
                     'branch_name'           => $order->branch->name,
