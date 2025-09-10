@@ -168,12 +168,12 @@ class BranchController extends Controller
         $currentMonth = date("F");
         $branchId = $branch->id;
 
-   
+
         $last_month_sale = Order::where('branch_id', $branchId)
-        ->where('status', 'complete')
-        ->where('date', '>=', $start_date)
-        ->where('date', '<=', $end_date)
-        ->sum('total');
+            ->where('status', 'complete')
+            ->where('date', '>=', $start_date)
+            ->where('date', '<=', $end_date)
+            ->sum('total');
 
         // dd($last_month_sale, $last_month, $start_date, $end_date);
         // die();
@@ -209,35 +209,35 @@ class BranchController extends Controller
         $branch->delivery_cost = $request->delivery_cost ?? 0;
         $branch->pos_end_line = $request->pos_end_line;
         $branch->update();
-// Create a DateTime object for the current month and year
-$currentDateTime = new GlobalDateTime($currentYear . '-' . $currentMonth);
+        // Create a DateTime object for the current month and year
+        $currentDateTime = new GlobalDateTime($currentYear . '-' . $currentMonth);
 
-// Subtract one month to get the previous month
-$previousDateTime = clone $currentDateTime;
-$previousDateTime->modify('-1 month');
+        // Subtract one month to get the previous month
+        $previousDateTime = clone $currentDateTime;
+        $previousDateTime->modify('-1 month');
 
-// Extract the previous month and year
-$previousMonth = $previousDateTime->format("F");
-$previousYear = $previousDateTime->format("Y");
+        // Extract the previous month and year
+        $previousMonth = $previousDateTime->format("F");
+        $previousYear = $previousDateTime->format("Y");
 
-// Now, you can use $previousMonth and $previousYear in your queries
+        // Now, you can use $previousMonth and $previousYear in your queries
 
-// Find the record for the previous month
-$previousMonthTarget = DB::table('sale_targets')
-    ->where('branch_id', $branchId)
-    ->where('target_month', $previousMonth)
-    ->where('target_year', $previousYear)
-    ->first();
+        // Find the record for the previous month
+        $previousMonthTarget = DB::table('sale_targets')
+            ->where('branch_id', $branchId)
+            ->where('target_month', $previousMonth)
+            ->where('target_year', $previousYear)
+            ->first();
 
-// Update the previous month record if it exists
-if ($previousMonthTarget) {
-    DB::table('sale_targets')
-        ->where('id', $previousMonthTarget->id)
-        ->update([
-            'achived_amount' => $last_month_sale,
-            'deficit_amount' => $achivedordeficit
-        ]);
-}
+        // Update the previous month record if it exists
+        if ($previousMonthTarget) {
+            DB::table('sale_targets')
+                ->where('id', $previousMonthTarget->id)
+                ->update([
+                    'achived_amount' => $last_month_sale,
+                    'deficit_amount' => $achivedordeficit
+                ]);
+        }
 
 
         // Check if the record exists
@@ -266,7 +266,7 @@ if ($previousMonthTarget) {
             //     'achived_amount' => $last_month_sale,
             //     'deficit_amount' => $achivedordeficit
             // ]);
-        
+
         }
 
 
@@ -299,13 +299,13 @@ if ($previousMonthTarget) {
             'user_id' => $request->user()->id,
         ]));
 
-		$branch->status = $request->status;
+        $branch->status = $request->status;
         $branch->save();
 
-		DB::commit();
+        DB::commit();
         CacheBranch::forget();
 
-        return back()->with('success', 'Status changed to "'.$branch->statuses[$request->status].'" successfully');
+        return back()->with('success', 'Status changed to "' . $branch->statuses[$request->status] . '" successfully');
     }
 
     /**
@@ -334,8 +334,8 @@ if ($previousMonthTarget) {
 
         $params = [
             'users' => $users,
-            'page_roles' => $page_roles,
             'access' => $access,
+            'page_roles' => $page_roles,
         ];
 
         return Inertia::render('Manage/Branch/Access', $params);
