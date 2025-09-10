@@ -17,14 +17,17 @@ use App\Models\Status;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductItem;
+use App\UseRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Mpdf\Tag\Tr;
+
 
 class ProductController extends Controller
 {
@@ -165,6 +168,7 @@ class ProductController extends Controller
 
         return Inertia::render('Manage/Product/Edit', $params);
     }
+
     public function updateStatus(Request $request, Product $product)
     {
         if (! array_key_exists($request->status, $product->statuses)) {
@@ -186,13 +190,13 @@ class ProductController extends Controller
         } catch (\Throwable $th) {
             //throw $th;
         }
-       
+
         $product->status = $request->status;
         $product->save();
         DB::commit();
         CacheProduct::forget();
 
-        return back()->with('success', 'Status changed to "'.$product->statuses[$request->status].'" successfully');
+        return back()->with('success', 'Status changed to "' . $product->statuses[$request->status] . '" successfully');
     }
     /**
      * Update the specified resource in storage.
@@ -233,43 +237,7 @@ class ProductController extends Controller
 
         $product->update();
 
-        if ($request->image_file) {
-            if ($request->hasFile('image_file')) {
-                if ($request->file('image_file')->isValid()) {
-                    Storage::makeDirectory('thumbnails/images/');
-                    $thumbnail_path = Storage::path('thumbnails/images/');
-
-                    $extension = $request->image_file->extension();
-                    $file_name = Str::random(10).'.'.$extension;
-                    $image_path = $request->image_file->storeAs('images', $file_name, 'public');
-
-                    // create image manager with desired driver
-                    $manager = new ImageManager(config('image.driver'));
-
-                    // read image from file system
-                    $image_mng = $manager->make(Storage::path($image_path));
-
-                    // resize image proportionally to 300px width
-                    $image_mng->scale(width: 134);
-
-                    // save modified image in new format
-                    $image_mng->toPng()->save($thumbnail_path.'/'.$file_name);
-
-                    $image = new Image(['path' => $image_path]);
-                    $product->images()->save($image);
-                }
-            }
-        } else {
-            if ($product->latest_image && $request->image_removed) {
-                foreach ($product->images as $image) {
-                    if (Storage::exists($image->path)) {
-                        unlink(storage_path('app/public/thumbnails/'.$image->path));
-                        unlink(storage_path('app/public/'.$image->path));
-                    }
-                    $image->delete();
-                }
-            }
-        }
+        $this->handleProductImage($request, $product);
 
         if ($is_platter) {
             $previous_items = $product->platters->pluck('id')->toArray();
@@ -321,6 +289,66 @@ class ProductController extends Controller
         CacheProductItem::forget();
 
         return back()->with('success', 'Product updated successfully.');
+    }
+
+    /**
+     * Handle product image upload and removal
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Models\Product $product
+     * @return \Illuminate\Http\RedirectResponse|null
+     */
+    protected function handleProductImage(Request $request, Product $product)
+    {
+        // Validation
+        $request->validate([
+            'photo_file' => ['nullable', 'file', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
+            'photo_removed' => ['required', 'boolean'],
+        ]);
+
+        $relative_path = 'images';
+        $relative_thumbnail = 'thumbnails/' . $relative_path;
+
+        // Ensure directories exist
+        Storage::makeDirectory($relative_path);
+        Storage::makeDirectory($relative_thumbnail);
+
+        $original_thumbnail = Storage::path($relative_thumbnail);
+
+        // Handle new image upload
+        if ($request->hasFile('photo_file') && $request->file('photo_file')->isValid()) {
+            $extension = $request->photo_file->extension();
+            $file_name = $product->id . '-' . $product->name . '-image.' . $extension;
+            $image_path = $request->photo_file->storeAs($relative_path, $file_name, 'public');
+
+            $thumbnail_file_path = $original_thumbnail . '/' . $file_name;
+
+            $manager = new ImageManager(new Driver());
+            $image_mng = $manager->read(Storage::path($image_path));
+            $image_mng->scale(width: 134);
+            $image_mng->toPng()->save($thumbnail_file_path);
+
+            $image = UseRecord::makeImage($image_path, $product);
+
+            if (! $image) {
+                return back()->with('fail', 'Image update failed!');
+            }
+        }
+        // Handle image removal
+        elseif ($product->latest_image && $request->photo_removed) {
+            foreach ($product->images as $image) {
+                if (Storage::exists($image->path)) {
+                    Storage::delete($image->path);
+                }
+
+                $thumbnail_path = 'thumbnails/' . $image->path;
+                if (Storage::exists($thumbnail_path)) {
+                    Storage::delete($thumbnail_path);
+                }
+
+                $image->delete();
+            }
+        }
     }
 
     /**

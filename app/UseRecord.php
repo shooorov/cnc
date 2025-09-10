@@ -2,8 +2,10 @@
 
 namespace App;
 
+use App\Http\Cache\CacheImage;
 use App\Http\Cache\CacheRemark;
 use App\Models\Document;
+use App\Models\Image;
 use App\Models\Remark;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -23,22 +25,31 @@ class UseRecord
         }
     }
 
+    public static function makeImage($image_path, $instance)
+    {
+        $return = $instance->addImage()->save(new Image([
+            'path' => $image_path,
+        ]));
+
+        return $return;
+    }
+
     public static function documentsUpload($document_files, $instance, $additional = null)
     {
         foreach ((is_array($document_files) ? $document_files : []) as $key => $file) {
             if ($file->isValid()) {
-                $folder_path = class_basename($instance).'/'.date('Y/F/');
+                $folder_path = class_basename($instance) . '/' . date('Y/F/');
                 Storage::makeDirectory($folder_path);
 
-                $file_name = $additional.$file->getClientOriginalName();
+                $file_name = $additional . $file->getClientOriginalName();
 
                 $name = pathinfo($file_name, PATHINFO_FILENAME);
                 $extension = pathinfo($file_name, PATHINFO_EXTENSION);
                 $salt = Str::random(2);
-                $full_path = $folder_path.'/'.$file_name;
+                $full_path = $folder_path . '/' . $file_name;
 
-                if (Storage::exists('documents/'.$full_path)) {
-                    $full_path = $folder_path.'/'.$name.'-'.$salt.'.'.$extension;
+                if (Storage::exists('documents/' . $full_path)) {
+                    $full_path = $folder_path . '/' . $name . '-' . $salt . '.' . $extension;
                 }
 
                 $document_path = $file->storeAs('documents', $full_path, 'public');
