@@ -253,12 +253,41 @@ class OrderController extends Controller
             $query->offset($start)->limit($length);
         }
 
-        $record_collection = new OrderCollection($query->get());
-        $record_collection->draw = intval($request->draw);
-        $record_collection->recordsFiltered = $recordsFiltered;
-        $record_collection->recordsTotal = $recordsTotal;
+        $records = $query->get();
 
-        return $record_collection;
+        return response()->json([
+            'draw'            => intval($request->draw),
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data'            => $records->map(function ($order) {
+                $actions = [];
+                $actions['print'] = RolePermission::isRouteValid('pos.print') ? route('pos.print', $order->id) : '';
+                $actions['detail'] = RolePermission::isRouteValid('order.show') ? route('order.show', $order->id) : '';
+                $actions['edit'] = UseBranch::id() && RolePermission::isRouteValid('pos.create') ? route('pos.create', $order->id) : '';
+                $actions['destroy'] = UseBranch::id() && RolePermission::isRouteValid('order.destroy') ? route('order.destroy', $order->id) : '';
+                return [
+                    'id'                    => $order->id,
+                    'branch_name'           => $order->branch->name,
+                    'waiter_name'           => $order->waiter_name,
+                    'invoice_number'        => $order->invoice_number,
+                    'branch_invoice'        => $order->branch->name . '<br>' . $order->invoice_number,
+                    'datetime_format'       => $order->datetime_format,
+                    'payment_method_name'   => $order->payment_method_name,
+                    'discount_amount'       => $order->discount_amount,
+                    'discount_type'         => $order->discount_type,
+                    'member_code'           => $order->member_code,
+                    'member_discount'       => $order->member_discount,
+                    'is_complete'           => $order->status === 'complete' || ! empty($order->cash),
+
+                    'detail'                => collect([$order->description, $order->payment_method_name,])->filter(fn($i) => $i)->join('<br>'),
+                    'description'           => $order->description,
+                    'vat_amount'            => $order->vat_amount,
+                    'total'                 => $order->total,
+                    'status'                => $order->status,
+                    'actions'               => $actions,
+                ];
+            }),
+        ]);
     }
 
     /**

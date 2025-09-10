@@ -109,7 +109,7 @@ const loadAjaxData = () => {
             },
             {
                 class: 'px-2 sm:px-4 py-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5',
-                data: 'action',
+                data: 'actions',
                 sortable: false
             }
         ]
