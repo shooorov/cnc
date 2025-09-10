@@ -1,25 +1,13 @@
 <script setup>
-import { reactive, onMounted, onUpdated } from 'vue'
-import { router, Head, Link } from '@inertiajs/vue3'
+import { Head, router } from '@inertiajs/vue3'
+import { onMounted, onUpdated, reactive } from 'vue'
 
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import Breadcrumb from '@/Components/Breadcrumb.vue'
 import Alert from '@/Components/Alert.vue'
+import Breadcrumb from '@/Components/Breadcrumb.vue'
 import Combobox from '@/Components/Combobox.vue'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
-import { PlusIcon, ChevronUpDownIcon } from '@heroicons/vue/24/solid'
-
-import {
-    ArrowTopRightOnSquareIcon,
-    FunnelIcon,
-    PencilSquareIcon,
-    PrinterIcon,
-    TrashIcon,
-    MagnifyingGlassIcon,
-    ShoppingCartIcon,
-    ArrowPathIcon,
-    TableCellsIcon
-} from '@heroicons/vue/24/outline'
+import { ArrowPathIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     filter: Object,
@@ -52,7 +40,7 @@ const loadAjaxData = () => {
         responsive: true,
         serverSide: true,
         processing: true,
-		destroy: true,
+        destroy: true,
         lengthMenu: [
             [10, 25, 50, 100, 200],
             [10, 25, 50, 100, 200]
@@ -110,7 +98,7 @@ const loadAjaxData = () => {
             //     class: 'px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap border-b border-gray-200 text-sm leading-5',
             //     data: 'member_discount'
             // },
-          
+
             {
                 class: 'px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap border-b border-gray-200 text-sm leading-5',
                 data: 'vat_amount'
@@ -151,8 +139,7 @@ const submit = () => {
                         <div class="flex-1 min-w-0">
                             <Breadcrumb :breadcrumbs="breadcrumbs" />
                         </div>
-                        <div class="mt-6 h-9 flex space-x-3 md:mt-0 md:ml-4">
-                        </div>
+                        <div class="mt-6 h-9 flex space-x-3 md:mt-0 md:ml-4"></div>
                     </div>
                 </div>
             </div>
@@ -160,20 +147,21 @@ const submit = () => {
             <div class="py-5">
                 <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
                     <div class="bg-white shadow sm:rounded-lg">
-						<div
-							class="flex flex-col sm:flex-row sm:justify-between items-center px-4 py-5 border-b border-gray-200 sm:px-8">
-							<div class="flex-1">
-								<h3 class="text-base font-semibold leading-6 text-gray-900">Orders</h3>
-								<p class="mt-1 text-sm text-gray-500">
-									{{ (props.filter.start_date ? props.filter.start_date.split("-").reverse().join("/") : '') + " - " +
-										(props.filter.end_date ? props.filter.end_date.split("-").reverse().join("/") : '') }}
-								</p>
-							</div>
-							<div class="flex-shrink-0 flex space-x-3">
-							</div>
-						</div>
+                        <div class="flex flex-col sm:flex-row sm:justify-between items-center px-4 py-5 border-b border-gray-200 sm:px-8">
+                            <div class="flex-1">
+                                <h3 class="text-base font-semibold leading-6 text-gray-900">Orders</h3>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    {{
+                                        (props.filter.start_date ? props.filter.start_date.split('-').reverse().join('/') : '') +
+                                        ' - ' +
+                                        (props.filter.end_date ? props.filter.end_date.split('-').reverse().join('/') : '')
+                                    }}
+                                </p>
+                            </div>
+                            <div class="flex-shrink-0 flex space-x-3"></div>
+                        </div>
 
-						<Alert />
+                        <Alert />
 
                         <form @submit.prevent="submit">
                             <dl class="px-5 py-5 mx-auto max-w-5xl">
@@ -193,10 +181,10 @@ const submit = () => {
                                         <Combobox class="mt-1" v-model="form.customer_id" :items="customers" />
                                     </dd>
 
-                                    <!-- <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                                         <label class="block text-sm font-medium text-gray-700">Payment Method</label>
                                         <Combobox class="mt-1" v-model="form.payment_method_id" :items="payment_methods" />
-                                    </dd> -->
+                                    </dd>
 
                                     <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                                         <label class="block text-sm font-medium text-gray-700">Start Date</label>
@@ -214,24 +202,24 @@ const submit = () => {
                                             class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
                                     </dd>
 
-									<dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-										<label class="block text-sm font-medium text-gray-700">Status</label>
-										<Combobox class="mt-1" v-model="form.status" :items="statuses" />
-									</dd>
+                                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700">Status</label>
+                                        <Combobox class="mt-1" v-model="form.status" :items="statuses" />
+                                    </dd>
 
                                     <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                                         <label class="block text-sm font-medium text-gray-700">Action</label>
-                                        <div class="inline-flex mt-1 rounded" role="group">
+                                        <div class="flex w-full mt-1 rounded shadow-sm" role="group">
                                             <button
                                                 type="submit"
-                                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-l shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600">
+                                                class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-l text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600">
                                                 <MagnifyingGlassIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                                                 Search
                                             </button>
 
                                             <button
                                                 @click="clearFilter"
-                                                class="inline-flex items-center px-4 py-1 border border-primary-600 rounded-r shadow-sm text-sm font-medium text-primary-700 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600">
+                                                class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-primary-600 rounded-r text-sm font-medium text-primary-700 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600">
                                                 <ArrowPathIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                                                 Clear
                                             </button>

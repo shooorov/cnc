@@ -50,7 +50,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-		$status = $request->status;
+        $status = $request->status;
         $isDateSearch = RolePermission::isEnabled('record_search.order_date_search');
         $isThirtyparcenton = RolePermission::isEnabled('one_third.feature_on');
 
@@ -70,35 +70,35 @@ class OrderController extends Controller
 
             return [
                 'id' => $i->id,
-                'name' => collect($name)->filter(fn ($i) => $i)->join(' / '),
+                'name' => collect($name)->filter(fn($i) => $i)->join(' / '),
             ];
         });
         $payment_methods = CachePaymentMethod::get();
-        if($isThirtyparcenton && !$request->user()->is_admin){
+        if ($isThirtyparcenton && !$request->user()->is_admin) {
             $order_managers = Order::select('manager_id')
-            ->where('vat_add', 1) // Adding the condition for vat_add = 1
-            ->groupBy('manager_id')
-            ->pluck('manager_id')
-            ->toArray();
-        }else{
-        $order_managers = Order::select('manager_id')
-			->groupBy('manager_id')
-			->pluck('manager_id')
-			->toArray();
+                ->where('vat_add', 1) // Adding the condition for vat_add = 1
+                ->groupBy('manager_id')
+                ->pluck('manager_id')
+                ->toArray();
+        } else {
+            $order_managers = Order::select('manager_id')
+                ->groupBy('manager_id')
+                ->pluck('manager_id')
+                ->toArray();
         }
 
         // $order_managers = Order::select('manager_id')
-		// 	->groupBy('manager_id')
-		// 	->pluck('manager_id')
-		// 	->toArray();
+        // 	->groupBy('manager_id')
+        // 	->pluck('manager_id')
+        // 	->toArray();
 
         $managers = CacheUser::get()->whereIn('id', $order_managers)->values()->all();
 
         $waiters = User::whereIsWaiter(true)->get();
 
-		$order = new Order;
+        $order = new Order;
 
-		$statuses = collect($order->statuses)->map(function ($status, $index) {
+        $statuses = collect($order->statuses)->map(function ($status, $index) {
             return [
                 'id' => $index,
                 'name' => $status,
@@ -133,12 +133,12 @@ class OrderController extends Controller
      */
     public function load(Request $request)
     {
-        $start = $request->start ?? 0;
-        $length = $request->length ?? -1;
+        $start = intval($request->start ?? 0);
+        $length = intval($request->length ?? -1);
 
-        $filter = $request->search['value'];
-        $sort_dir = $request->order[0]['dir'];
-        $sort_column = $request->order[0]['column'];
+        $filter = $request->search['value'] ?? null;
+        $sort_dir = $request->order[0]['dir'] ?? 'asc';
+        $sort_column = $request->order[0]['column'] ?? 1;
 
         $status = $request->status;
         $manager_id = $request->manager_id;
@@ -157,81 +157,103 @@ class OrderController extends Controller
             $start_date = Helpers::dayStartedAt();
         }
 
-        // $records = Order::query()
-        //     ->when($start_date, function ($query, $start_date) {
-        //         $query->where('orders.date', '>=', $start_date);
-        //     })
-        //     ->when($end_date, function ($query, $end_date) {
-        //         $query->where('orders.date', '<=', $end_date);
-        //     })
-        //     ->when($manager_id, function ($query, $manager_id) {
-        //         $query->where('orders.manager_id', $manager_id);
-        //     })
-        //     ->when($waiter_id, function ($query, $waiter_id) {
-        //         $query->where('orders.waiter_id', $waiter_id);
-        //     })
-        //     ->when($status, function ($query, $status) {
-        //         $query->where('orders.status', $status);
-        //     })
-        //     ->when($customer_id, function ($query, $customer_id) {
-        //         $query->where('orders.customer_id', $customer_id);
-        //     })
-        //     ->when($payment_method_id, function ($query, $payment_method_id) {
-        //         $query->where('payment_methods.id', $payment_method_id);
-        //     });
-        $records = Order::query()
-        ->when($start_date, function ($query, $start_date) {
-            $query->where('orders.date', '>=', $start_date);
-        })
-        ->when($end_date, function ($query, $end_date) {
-            $query->where('orders.date', '<=', $end_date);
-        })
-        ->when($manager_id, function ($query, $manager_id) {
-            $query->where('orders.manager_id', $manager_id);
-        })
-        ->when($waiter_id, function ($query, $waiter_id) {
-            $query->where('orders.waiter_id', $waiter_id);
-        })
-        ->when($status, function ($query, $status) {
-            $query->where('orders.status', $status);
-        })
-        ->when($customer_id, function ($query, $customer_id) {
-            $query->where('orders.customer_id', $customer_id);
-        })
-        ->when($payment_method_id, function ($query, $payment_method_id) {
-            $query->where('payment_methods.id', $payment_method_id);
-        })
-        ->when($isThirtyparcenton && !$request->user()->is_admin, function ($query) {
-            // Add condition for vat_add = 1 if $isThirtyparcenton is true
-            $query->where('orders.vat_add', 1);
-        });
-        $recordsTotal = (clone $records)->count();
-
-        $records->where(function ($query) use ($filter) {
-            $query->where('orders.invoice_number', 'like', '%'.$filter.'%');
-        });
-
-        $recordsFiltered = (clone $records)->count();
-
+        // Column mapping for sorting/searching
         $columns = [
-            '',
-            'orders.date',
-            'orders.invoice_number',
-            '',
-            'orders.discount_amount',
-            
-            'orders.vat_amount',
-            'orders.total',
-            '',
+            0 => null,
+            1 => 'orders.date',
+            2 => 'orders.invoice_number',
+            3 => 'customers.name',
+            4 => 'orders.discount_amount',
+            5 => 'orders.vat_amount',
+            6 => 'orders.total',
+            7 => 'payment_methods.name',
         ];
 
-        $records->orderBy($columns[$sort_column], $sort_dir);
+        // Base query with joins for related columns
+        $baseQuery = Order::query()
+            ->select(
+                'orders.*',
+                'customers.name as customer_name',
+                'payment_methods.name as payment_method_name',
+                'manager.name as manager_name',
+                'waiter.name as waiter_name'
+            )
+            ->leftJoin('customers', 'customers.id', '=', 'orders.customer_id')
+            ->leftJoin('payment_methods', 'payment_methods.id', '=', 'orders.payment_method_id')
+            ->leftJoin('users as manager', 'manager.id', '=', 'orders.manager_id')
+            ->leftJoin('users as waiter', 'waiter.id', '=', 'orders.waiter_id');
 
-        if ($length > 0) {
-            $records->offset($start)->limit($length);
+        // Apply filters
+        if ($start_date) {
+            $baseQuery->where('orders.date', '>=', $start_date);
+        }
+        if ($end_date) {
+            $baseQuery->where('orders.date', '<=', $end_date);
+        }
+        if ($manager_id) {
+            $baseQuery->where('orders.manager_id', $manager_id);
+        }
+        if ($waiter_id) {
+            $baseQuery->where('orders.waiter_id', $waiter_id);
+        }
+        if ($status) {
+            $baseQuery->where('orders.status', $status);
+        }
+        if ($customer_id) {
+            $baseQuery->where('orders.customer_id', $customer_id);
+        }
+        if ($payment_method_id) {
+            $baseQuery->where('orders.payment_method_id', $payment_method_id);
+        }
+        if ($isThirtyparcenton && !$request->user()->is_admin) {
+            $baseQuery->where('orders.vat_add', 1);
         }
 
-        $record_collection = new OrderCollection($records->get());
+        // Total count before search
+        $recordsTotal = (clone $baseQuery)->count();
+
+        // Clone and apply search
+        $query = clone $baseQuery;
+
+        // Column-specific search
+        if ($request->columns && is_array($request->columns)) {
+            foreach ($request->columns as $index => $col) {
+                $colSearch = $col['search']['value'] ?? null;
+                $colName = $columns[$index] ?? null;
+                if ($colSearch && $colName) {
+                    $query->where($colName, 'like', '%' . $colSearch . '%');
+                }
+            }
+        }
+
+        // Global search
+        if ($filter) {
+            $query->where(function ($q) use ($filter) {
+                $q->where('orders.invoice_number', 'like', '%' . $filter . '%')
+                    ->orWhere('customers.name', 'like', '%' . $filter . '%')
+                    ->orWhere('manager.name', 'like', '%' . $filter . '%')
+                    ->orWhere('waiter.name', 'like', '%' . $filter . '%')
+                    ->orWhere('payment_methods.name', 'like', '%' . $filter . '%')
+                    ->orWhere('orders.total', 'like', '%' . $filter . '%');
+            });
+        }
+
+        // Filtered count after search
+        $recordsFiltered = (clone $query)->count();
+
+        // Sorting
+        if (!empty($columns[$sort_column])) {
+            $query->orderBy($columns[$sort_column], $sort_dir);
+        } else {
+            $query->orderBy('orders.date', 'desc');
+        }
+
+        // Pagination
+        if ($length > 0) {
+            $query->offset($start)->limit($length);
+        }
+
+        $record_collection = new OrderCollection($query->get());
         $record_collection->draw = intval($request->draw);
         $record_collection->recordsFiltered = $recordsFiltered;
         $record_collection->recordsTotal = $recordsTotal;
@@ -289,7 +311,6 @@ class OrderController extends Controller
             $order->delete();
 
             DB::commit();
-
         } catch (\Exception $e) {
             DB::rollback();
             throw ($e);
@@ -333,6 +354,6 @@ class OrderController extends Controller
 
         CacheOrder::forget();
 
-        return back()->with('success', 'Status changed to "'.$order->statuses[$request->status].'" successfully');
+        return back()->with('success', 'Status changed to "' . $order->statuses[$request->status] . '" successfully');
     }
 }
