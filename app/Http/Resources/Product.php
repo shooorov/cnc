@@ -53,6 +53,7 @@ class Product extends JsonResource
         // dd($this->items,$request,$remaining);
         // die();
         //$group_items = ProductItem::get()->where('product_id', $this->id)->values();
+        // dd($this->image_url);
 
         return $this->filterFields([
             'id' => $this->id,
@@ -60,7 +61,7 @@ class Product extends JsonResource
             'name' => $this->name,
             'english_name' => $this->english_name,
             'vat_applicable' => $this->vat_applicable,
-            'title' => $this->name.' - '.$this->code,
+            'title' => $this->name . ' - ' . $this->code,
             'rate' => $this->rate,
             'discount' => $this->discount,
             'number_of_persons' => $this->number_of_persons,
@@ -73,7 +74,7 @@ class Product extends JsonResource
             //'group_items' => count($group_items) ? ProductionItem::collection($group_items) : [],
             'group_items' => count($group_items) ? new ResourceCollection($group_items) : [],
 
-            'items_count' => (count($this->items) ?? 0).(count($this->items) > 1 ? ' Items ' : ' Item'),
+            'items_count' => (count($this->items) ?? 0) . (count($this->items) > 1 ? ' Items ' : ' Item'),
             'platter_items' => $platter_items,
 
             'remaining' => $remaining,
@@ -82,10 +83,10 @@ class Product extends JsonResource
             'product_category_id' => $this->product_category_id,
             'category_name' => $this->product_category?->name,
 
-            'image' => $this->image ?? asset('img/product.jpg'),
-            'image_default' => asset('img/product.jpg'),
+            'image' => $this->image_url ?? asset('img/product.jpg'),
+            'image_default' => $this->default_image_url ?? asset('img/product.jpg'),
 
-            'subTitle' => $this->name.' - '.$this->code,
+            'subTitle' => $this->name . ' - ' . $this->code,
             'price' => $this->rate,
             'images' => [
                 [

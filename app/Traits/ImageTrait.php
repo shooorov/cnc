@@ -9,9 +9,9 @@ use Illuminate\Support\Str;
 
 trait ImageTrait
 {
-	protected $default_image = '/img/avatar.jpg';
-	
-	protected $directory = 'images';
+    protected $default_image = '/img/avatar.jpg';
+
+    protected $directory = 'images';
 
     /**
      * Get the Model's image.
@@ -34,7 +34,7 @@ trait ImageTrait
      */
     public function defaultImageUrl(): Attribute
     {
-        return Attribute::get(fn () => asset($this->default_image));
+        return Attribute::get(fn() => asset($this->default_image));
     }
 
     /**
@@ -49,11 +49,11 @@ trait ImageTrait
         //     $path = Storage::url('thumbnails/' . $this->latest_image->path);
         // }
 
-		$path = $this->latest_image && $this->latest_image?->path && Storage::disk('public')->exists($this->latest_image?->path) 
-			? Storage::disk('public')->url($this->latest_image->path) 
-			: $this->default_image_url;
+        $path = $this->latest_image && $this->latest_image?->path && Storage::disk('public')->exists($this->latest_image?->path)
+            ? Storage::disk('public')->url($this->latest_image->path)
+            : $this->default_image_url;
 
-        return Attribute::get(fn () => $path);
+        return Attribute::get(fn() => $path);
     }
 
     /**
@@ -61,35 +61,34 @@ trait ImageTrait
      *
      * @return \Illuminate\Database\Eloquent\Casts\Attribute
      */
-	public function storeImage($imageFile) : String
-	{
-		$extension = $imageFile->extension();
-		$file_name = Str::random(16) . '.' . $extension;
-		$image_path = $imageFile->storeAs($this->directory, $file_name, 'public');
+    public function storeImage($imageFile): String
+    {
+        $extension = $imageFile->extension();
+        $file_name = Str::random(16) . '.' . $extension;
+        $image_path = $imageFile->storeAs($this->directory, $file_name, 'public');
 
-		$image = new Image(['path' => $image_path]);
-		$this->images()->save($image);
-		return $image_path;
-	}
+        $image = new Image(['path' => $image_path]);
+        $this->images()->save($image);
+        return $image_path;
+    }
 
     /**
      * Delete image from imageable.
      *
      * @return \Illuminate\Database\Eloquent\Casts\Attribute
      */
-	public function destroyImage() : void
-	{
-		// foreach ($this->images as $image) {
-		// 	if (Storage::disk('public')->exists($image->path)) {
-		// 		unlink(Storage::disk('public')->path($image->path));
-		// 	}
-		// 	$image->delete();
-		// }
+    public function destroyImage(): void
+    {
+        // foreach ($this->images as $image) {
+        // 	if (Storage::disk('public')->exists($image->path)) {
+        // 		unlink(Storage::disk('public')->path($image->path));
+        // 	}
+        // 	$image->delete();
+        // }
 
-		if($this->latest_image && !empty($this->latest_image?->path)) {
-			$image = new Image(['path' => ""]);
-			$this->images()->save($image);
-		}
-
-	}
+        if ($this->latest_image && !empty($this->latest_image?->path)) {
+            $image = new Image(['path' => ""]);
+            $this->images()->save($image);
+        }
+    }
 }

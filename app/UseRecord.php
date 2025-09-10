@@ -27,9 +27,10 @@ class UseRecord
 
     public static function makeImage($image_path, $instance)
     {
-        $return = $instance->addImage()->save(new Image([
+        $return = $instance->images()->save(new Image([
             'path' => $image_path,
         ]));
+        $instance->update(['image' => $image_path]);
 
         return $return;
     }

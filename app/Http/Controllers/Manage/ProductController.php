@@ -302,8 +302,8 @@ class ProductController extends Controller
     {
         // Validation
         $request->validate([
-            'photo_file' => ['nullable', 'file', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
-            'photo_removed' => ['required', 'boolean'],
+            'image_file' => ['nullable', 'file', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
+            'image_removed' => ['required', 'boolean'],
         ]);
 
         $relative_path = 'images';
@@ -316,10 +316,10 @@ class ProductController extends Controller
         $original_thumbnail = Storage::path($relative_thumbnail);
 
         // Handle new image upload
-        if ($request->hasFile('photo_file') && $request->file('photo_file')->isValid()) {
-            $extension = $request->photo_file->extension();
+        if ($request->hasFile('image_file') && $request->file('image_file')->isValid()) {
+            $extension = $request->image_file->extension();
             $file_name = $product->id . '-' . $product->name . '-image.' . $extension;
-            $image_path = $request->photo_file->storeAs($relative_path, $file_name, 'public');
+            $image_path = $request->image_file->storeAs($relative_path, $file_name, 'public');
 
             $thumbnail_file_path = $original_thumbnail . '/' . $file_name;
 
@@ -335,7 +335,7 @@ class ProductController extends Controller
             }
         }
         // Handle image removal
-        elseif ($product->latest_image && $request->photo_removed) {
+        elseif ($product->latest_image && $request->image_removed) {
             foreach ($product->images as $image) {
                 if (Storage::exists($image->path)) {
                     Storage::delete($image->path);

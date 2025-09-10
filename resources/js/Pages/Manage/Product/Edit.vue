@@ -61,11 +61,11 @@
                                                     aria-hidden="true"
                                                     @click=";(form.image = form.image_default), (form.image_file = null), (form.image_removed = true)" />
                                             </div>
-                                            <div v-show="form.image != product.image" class="absolute top-0 left-0 px-0 py-0 bg-gray-50 opacity-60" title="Refresh Image">
+                                            <div v-show="form.image != product.data.image" class="absolute top-0 left-0 px-0 py-0 bg-gray-50 opacity-60" title="Refresh Image">
                                                 <ArrowPathIcon
                                                     class="w-5 h-5 text-primary-500 hover:text-primary-700 cursor-pointer"
                                                     aria-hidden="true"
-                                                    @click=";(form.image = product.image), (form.image_file = null), (form.image_removed = false)" />
+                                                    @click=";(form.image = product.data.image), (form.image_file = null), (form.image_removed = false)" />
                                             </div>
                                         </div>
                                         <InputError :message="$page.props.errors.image" />
@@ -565,305 +565,260 @@
     </div>
 </template>
 
-<script>
-import StatusOptions from '@/Components/StatusOptions.vue'
-import StatusOptionsProducts from '@/Components/StatusOptionsProducts.vue'
+<script setup>
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
-import { reactive } from 'vue'
-//import StatusDropdown from '@/Components/StatusDropdown.vue';
+import { onMounted, reactive, ref, watch } from 'vue'
 
 import Alert from '@/Components/Alert.vue'
 import Breadcrumb from '@/Components/Breadcrumb.vue'
 import InputError from '@/Components/InputError.vue'
 import Listbox from '@/Components/Listbox.vue'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-
-import { ArrowPathIcon, PlusIcon, XMarkIcon } from '@heroicons/vue/24/solid'
+import StatusOptions from '@/Components/StatusOptions.vue'
 
 import { PencilSquareIcon } from '@heroicons/vue/24/outline'
+import { ArrowPathIcon, PlusIcon, XMarkIcon } from '@heroicons/vue/24/solid'
+import { computed } from 'vue'
 
-export default {
-    layout: AuthenticatedLayout,
+// layout
+defineOptions({ layout: AuthenticatedLayout })
 
-    components: {
-        Alert,
-        Breadcrumb,
-        Listbox,
-        Head,
-        InputError,
-        Link,
-        StatusOptionsProducts,
-        StatusOptions,
-        // StatusDropdown,
-        PlusIcon,
-        ArrowPathIcon,
-        PencilSquareIcon,
-        XMarkIcon
-    },
+// props
+const props = defineProps({
+    string_change: Object,
+    statuses: Object,
+    product: Object,
+    products: Array,
+    categories: Array,
+    items: Array,
+    units: Array
+})
 
-    props: {
-        string_change: Object,
-        statuses: Object,
+// state
+const is_platter = ref(false)
+const initialLoadComplete = ref(false)
 
-        product: Object,
-        products: Array,
-        categories: Array,
-        items: Array,
-        units: Array
-    },
+const breadcrumbs = [
+    { name: props.string_change.product_s, href: route('product.index'), current: false },
+    { name: 'Edit Page', href: '#', current: false }
+]
 
-    methods: {
-        onFileInput(file) {
-            return URL.createObjectURL(file)
-        },
+const form = reactive({
+    id: props.product.data.id,
+    code: props.product.data.code,
+    name: props.product.data.name,
+    english_name: props.product.data.english_name,
+    rate: props.product.data.rate,
+    status: props.product.data.status,
+    discount: props.product.data.discount,
+    number_of_persons: props.product.data.number_of_persons,
+    total: props.product.data.rate - props.product.data.discount,
+    description: props.product.data.description,
+    vat_applicable: props.product.data.vat_applicable,
+    product_category_id: props.product.data.product_category_id,
+    production_cost: props.product.data.production_cost,
+    ingredients_for: 1,
 
-        removePlatter(index) {
-            if (confirm('Are you sure you want to delete this element?')) {
-                this.form.platter_items.splice(index, 1)
-            }
-        },
+    margin_amount: props.product.data.margin_amount,
+    margin_percent: props.product.data.margin_percent,
 
-        addPlatter() {
-            this.form.platter_items.push({
-                item_id: null,
-                quantity: 1
-            })
-        },
+    group_items: props.product.data.group_items.length
+        ? props.product.data.group_items
+        : [
+              {
+                  id: '',
+                  item_id: '',
+                  quantity_use: null,
+                  unit_use: null,
+                  avg_rate: null
+              }
+          ],
 
-        removeItem(index) {
-            if (confirm('Are you sure you want to delete this element?')) {
-                this.form.group_items.splice(index, 1)
-            }
-        },
+    platter_items: props.product.data.platter_items?.length
+        ? props.product.data.platter_items
+        : [
+              {
+                  item_id: null,
+                  quantity: 1
+              }
+          ],
 
-        addItem() {
-            this.form.group_items.push({
-                id: '',
-                item_id: '',
-                quantity_use: null,
-                unit_use: null,
-                avg_rate: null
-            })
-        },
+    image: props.product.data.image,
+    image_default: props.product.data.image_default,
+    image_removed: false
+})
 
-        total() {
-            let sale_price = Number(this.form.rate)
-            let discount = Number(this.form.discount)
-            let production_cost = Number(this.form.production_cost)
-            let not_is_platter = !this.is_platter
-            let sale_price_gt_zero = sale_price > 0
+// methods
+const onFileInput = (file) => {
+    return URL.createObjectURL(file)
+}
 
-            this.form.total = (sale_price - discount).toFixed(2)
-
-            let margin_amount = not_is_platter && sale_price_gt_zero ? (sale_price - production_cost).toFixed(2) : null
-
-            this.form.margin_amount = margin_amount
-            this.form.margin_percent = not_is_platter && sale_price_gt_zero ? ((margin_amount / sale_price) * 100).toFixed(2) : null
-        },
-
-        calculation(index) {
-            if (index != undefined) {
-                let group_item = this.form.group_items[index]
-                let selected_item = this.items.find((item) => item.name == group_item.item_name)
-                console.log('Initial group_item:', group_item.quantity)
-
-                group_item.item_id = selected_item?.id ?? null
-                group_item.avg_rate = selected_item?.avg_rate ?? null
-                group_item.unit = selected_item?.unit ?? null
-
-                group_item.unit_use = null
-                group_item.quantity_use = 0
-                group_item.cost = 0
-
-                if (selected_item && group_item.quantity > 0) {
-                    switch (group_item.unit) {
-                        case 'kg':
-                            group_item.unit_use = 'g'
-                            group_item.quantity_use = ((group_item.quantity * 1000) / this.form.ingredients_for).toFixed(3)
-                            group_item.cost = ((selected_item.avg_rate / 1000) * group_item.quantity_use).toFixed(2)
-                            break
-
-                        case 'l':
-                            group_item.unit_use = 'ml'
-                            group_item.quantity_use = ((group_item.quantity * 1000) / this.form.ingredients_for).toFixed(3)
-                            group_item.cost = ((selected_item.avg_rate / 1000) * group_item.quantity_use).toFixed(2)
-                            break
-
-                        case 'pcs':
-                            group_item.unit_use = 'pcs'
-                            group_item.quantity_use = group_item.quantity / this.form.ingredients_for
-                            group_item.cost = (selected_item.avg_rate * group_item.quantity_use).toFixed(2)
-                            break
-
-                        default:
-                            group_item.unit_use = null
-                            group_item.quantity_use = 0
-                            group_item.cost = 0
-                            break
-                    }
-                }
-            } else {
-                this.form.group_items.forEach((group_item) => {
-                    let selected_item = this.items.find((item) => item.id == group_item.item_id)
-
-                    group_item.cost = selected_item
-                        ? group_item.unit_use != 'pcs'
-                            ? ((selected_item.avg_rate / 1000) * group_item.quantity_use).toFixed(2)
-                            : (selected_item.avg_rate * group_item.quantity_use).toFixed(2)
-                        : null
-                    let total_quantity =
-                        group_item.unit_use != 'pcs'
-                            ? ((group_item.quantity_use / 1000) * this.form.ingredients_for).toFixed(3)
-                            : (group_item.quantity_use * this.form.ingredients_for).toFixed(3)
-                    group_item.total_quantity = total_quantity > 0 ? Number(total_quantity) : null
-                })
-            }
-
-            this.form.production_cost = this.form.group_items.reduce((carry, val) => carry + Number(val.cost || 0), 0)
-            this.form.production_cost = this.form.production_cost.toFixed(2)
-            this.total()
-        },
-
-        platterCalculation(index = undefined) {
-            if (index != undefined) {
-                let platter_item = this.form.platter_items[index]
-                let selected_product = this.products.find((product) => product.name == platter_item.item_name)
-                platter_item.rate = selected_product?.rate ?? null
-                platter_item.item_id = selected_product?.id ?? null
-
-                platter_item.cost = selected_product ? ((platter_item.rate || 0) * (platter_item.quantity || 0)).toFixed(2) : null
-            } else {
-                this.form.platter_items.forEach((platter_item) => {
-                    let selected_product = this.products.find((product) => product.id == platter_item.item_id)
-                    platter_item.item_name = selected_product?.name ?? null
-                    platter_item.rate = selected_product?.rate ?? null
-                    platter_item.item_id = selected_product?.id ?? null
-                    platter_item.cost = selected_product ? ((selected_product.rate || 0) * (platter_item.quantity || 0)).toFixed(2) : null
-                })
-            }
-
-            this.form.production_cost = this.form.platter_items.reduce((carry, val) => carry + Number(val.cost || 0), 0)
-            this.form.production_cost = this.form.production_cost.toFixed(2)
-
-            this.total()
-        }
-    },
-
-    mounted() {
-        console.log(this.product.is_platter)
-        if (this.product.is_platter) {
-            this.platterCalculation()
-        } else {
-            this.calculation()
-        }
-    },
-
-    watch: {
-        'form.product_category_id'() {
-            let category = this.categories.find((category) => category.id == this.form.product_category_id)
-            this.is_platter = category?.is_platter
-        },
-
-        // 'form.group_items': {
-        //     deep: true,
-        //     handler(newVal) {
-        //         newVal.forEach((item, index) => {
-        //             this.calculation(index);
-        //         });
-        // }
-
-        'form.group_items': {
-            deep: true,
-            handler(newVal) {
-                if (!this.initialLoadComplete) {
-                    newVal.forEach((item, index) => {
-                        this.calculation(index)
-                    })
-                    this.initialLoadComplete = true
-                }
-            }
-        }
-    },
-
-    data() {
-        return {
-            // product: {
-            //   id: this.product.id, // Example ID, replace with actual data
-            //   status: 'active' // Initialize with actual product status from DB
-            // },
-            is_platter: false, // Or initialize with the default value you want
-            initialLoadComplete: false
-        }
-    },
-
-    setup(props) {
-        const breadcrumbs = [
-            { name: props.string_change.product_s, href: route('product.index'), current: false },
-            { name: 'Edit Page', href: '#', current: false }
-        ]
-
-        const form = reactive({
-            id: props.product.data.id,
-            code: props.product.data.code,
-            name: props.product.data.name,
-            english_name: props.product.data.english_name,
-            rate: props.product.data.rate,
-            status: props.product.data.status,
-            discount: props.product.data.discount,
-            number_of_persons: props.product.data.number_of_persons,
-            total: props.product.data.rate - props.product.data.discount,
-            description: props.product.data.description,
-            vat_applicable: props.product.data.vat_applicable,
-            product_category_id: props.product.data.product_category_id,
-            production_cost: props.product.data.production_cost,
-            ingredients_for: 1,
-
-            margin_amount: props.product.data.margin_amount,
-            margin_percent: props.product.data.margin_percent,
-
-            group_items: props.product.data.group_items.length
-                ? props.product.data.group_items
-                : [
-                      {
-                          id: '',
-                          item_id: '',
-                          quantity_use: null,
-                          unit_use: null,
-                          avg_rate: null
-                      }
-                  ],
-
-            platter_items: props.product.data.platter_items?.length
-                ? props.product.data.platter_items
-                : [
-                      {
-                          item_id: null,
-                          quantity: 1
-                      }
-                  ],
-
-            image: props.product.data.image,
-            image_default: props.product.data.image_default,
-            image_removed: false
-        })
-
-        function submit() {
-            router.post(route('product.update', props.product.data.id), form)
-        }
-
-        return {
-            breadcrumbs,
-            form,
-            submit
-        }
-    },
-    computed: {
-        status_of_product() {
-            return this.product.data.status
-        },
-        productId() {
-            return this.product.data.id
-        }
+const removePlatter = (index) => {
+    if (confirm('Are you sure you want to delete this element?')) {
+        form.platter_items.splice(index, 1)
     }
 }
+
+const addPlatter = () => {
+    form.platter_items.push({
+        item_id: null,
+        quantity: 1
+    })
+}
+
+const removeItem = (index) => {
+    if (confirm('Are you sure you want to delete this element?')) {
+        form.group_items.splice(index, 1)
+    }
+}
+
+const addItem = () => {
+    form.group_items.push({
+        id: '',
+        item_id: '',
+        quantity_use: null,
+        unit_use: null,
+        avg_rate: null
+    })
+}
+
+const total = () => {
+    let sale_price = Number(form.rate)
+    let discount = Number(form.discount)
+    let production_cost = Number(form.production_cost)
+    let not_is_platter = !is_platter.value
+    let sale_price_gt_zero = sale_price > 0
+
+    form.total = (sale_price - discount).toFixed(2)
+
+    let margin_amount = not_is_platter && sale_price_gt_zero ? (sale_price - production_cost).toFixed(2) : null
+
+    form.margin_amount = margin_amount
+    form.margin_percent = not_is_platter && sale_price_gt_zero ? ((margin_amount / sale_price) * 100).toFixed(2) : null
+}
+
+const calculation = (index) => {
+    if (index != undefined) {
+        let group_item = form.group_items[index]
+        let selected_item = props.items.find((item) => item.name == group_item.item_name)
+        console.log('Initial group_item:', group_item.quantity)
+
+        group_item.item_id = selected_item?.id ?? null
+        group_item.avg_rate = selected_item?.avg_rate ?? null
+        group_item.unit = selected_item?.unit ?? null
+
+        group_item.unit_use = null
+        group_item.quantity_use = 0
+        group_item.cost = 0
+
+        if (selected_item && group_item.quantity > 0) {
+            switch (group_item.unit) {
+                case 'kg':
+                    group_item.unit_use = 'g'
+                    group_item.quantity_use = ((group_item.quantity * 1000) / form.ingredients_for).toFixed(3)
+                    group_item.cost = ((selected_item.avg_rate / 1000) * group_item.quantity_use).toFixed(2)
+                    break
+
+                case 'l':
+                    group_item.unit_use = 'ml'
+                    group_item.quantity_use = ((group_item.quantity * 1000) / form.ingredients_for).toFixed(3)
+                    group_item.cost = ((selected_item.avg_rate / 1000) * group_item.quantity_use).toFixed(2)
+                    break
+
+                case 'pcs':
+                    group_item.unit_use = 'pcs'
+                    group_item.quantity_use = group_item.quantity / form.ingredients_for
+                    group_item.cost = (selected_item.avg_rate * group_item.quantity_use).toFixed(2)
+                    break
+
+                default:
+                    group_item.unit_use = null
+                    group_item.quantity_use = 0
+                    group_item.cost = 0
+                    break
+            }
+        }
+    } else {
+        form.group_items.forEach((group_item) => {
+            let selected_item = props.items.find((item) => item.id == group_item.item_id)
+
+            group_item.cost = selected_item
+                ? group_item.unit_use != 'pcs'
+                    ? ((selected_item.avg_rate / 1000) * group_item.quantity_use).toFixed(2)
+                    : (selected_item.avg_rate * group_item.quantity_use).toFixed(2)
+                : null
+            let total_quantity =
+                group_item.unit_use != 'pcs' ? ((group_item.quantity_use / 1000) * form.ingredients_for).toFixed(3) : (group_item.quantity_use * form.ingredients_for).toFixed(3)
+            group_item.total_quantity = total_quantity > 0 ? Number(total_quantity) : null
+        })
+    }
+
+    form.production_cost = form.group_items.reduce((carry, val) => carry + Number(val.cost || 0), 0)
+    form.production_cost = form.production_cost.toFixed(2)
+    total()
+}
+
+const platterCalculation = (index = undefined) => {
+    if (index != undefined) {
+        let platter_item = form.platter_items[index]
+        let selected_product = props.products.find((product) => product.name == platter_item.item_name)
+        platter_item.rate = selected_product?.rate ?? null
+        platter_item.item_id = selected_product?.id ?? null
+
+        platter_item.cost = selected_product ? ((platter_item.rate || 0) * (platter_item.quantity || 0)).toFixed(2) : null
+    } else {
+        form.platter_items.forEach((platter_item) => {
+            let selected_product = props.products.find((product) => product.id == platter_item.item_id)
+            platter_item.item_name = selected_product?.name ?? null
+            platter_item.rate = selected_product?.rate ?? null
+            platter_item.item_id = selected_product?.id ?? null
+            platter_item.cost = selected_product ? ((selected_product.rate || 0) * (platter_item.quantity || 0)).toFixed(2) : null
+        })
+    }
+
+    form.production_cost = form.platter_items.reduce((carry, val) => carry + Number(val.cost || 0), 0)
+    form.production_cost = form.production_cost.toFixed(2)
+
+    total()
+}
+
+const submit = () => {
+    router.post(route('product.update', props.product.data.id), form)
+}
+
+// lifecycle
+onMounted(() => {
+    console.log(props.product.is_platter)
+    if (props.product.is_platter) {
+        platterCalculation()
+    } else {
+        calculation()
+    }
+})
+
+// watchers
+watch(
+    () => form.product_category_id,
+    () => {
+        let category = props.categories.find((category) => category.id == form.product_category_id)
+        is_platter.value = category?.is_platter
+    }
+)
+
+watch(
+    () => form.group_items,
+    (newVal) => {
+        if (!initialLoadComplete.value) {
+            newVal.forEach((item, index) => {
+                calculation(index)
+            })
+            initialLoadComplete.value = true
+        }
+    },
+    { deep: true }
+)
+
+// computed
+const status_of_product = computed(() => props.product.data.status)
+const productId = computed(() => props.product.data.id)
 </script>
