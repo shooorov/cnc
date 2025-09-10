@@ -446,12 +446,12 @@
                                                     <button
                                                         @click="addItem()"
                                                         type="button"
-                                                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                                                         Add Item
                                                         <PlusIcon class="ml-2 -mr-0.5 h-4 w-4" aria-hidden="true" />
                                                     </button>
                                                 </th>
-                                                <th colspan="3" class="py-2 px-2 text-right text-base font-medium text-indigo-600">Production Cost:</th>
+                                                <th colspan="3" class="py-2 px-2 text-right text-base font-medium text-primary-600">Production Cost:</th>
                                                 <th class="py-2 px-1 text-right text-lg font-medium">{{ form.production_cost }}</th>
                                                 <th class="py-2 px-1 text-left text-lg font-medium">&#2547;</th>
                                             </tr>
