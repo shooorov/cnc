@@ -1,0 +1,1 @@
+import{o as e,f as r,b as o}from"./app-5791f070.js";function n(a,t){return e(),r("svg",{xmlns:"http://www.w3.org/2000/svg",viewBox:"0 0 24 24",fill:"currentColor","aria-hidden":"true"},[o("path",{"fill-rule":"evenodd",d:"M3.75 12a.75.75 0 01.75-.75h15a.75.75 0 010 1.5h-15a.75.75 0 01-.75-.75z","clip-rule":"evenodd"})])}export{n as r};

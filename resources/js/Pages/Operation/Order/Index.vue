@@ -1,142 +1,3 @@
-<script setup>
-import { Head, router } from '@inertiajs/vue3'
-import { createApp, h, onMounted, reactive, ref } from 'vue'
-
-import Alert from '@/Components/Alert.vue'
-import Breadcrumb from '@/Components/Breadcrumb.vue'
-import Combobox from '@/Components/Combobox.vue'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-
-import { ArrowPathIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, TrashIcon } from '@heroicons/vue/24/outline'
-
-const props = defineProps({
-    filter: Object,
-    managers: Array,
-    waiters: Array,
-    customers: Array,
-    statuses: Array,
-    payment_methods: Array
-})
-
-const form = reactive(props.filter)
-
-const breadcrumbs = [
-    { name: 'Orders', href: route('order.index'), current: false },
-    { name: 'List Page', href: '#', current: false }
-]
-
-const showProducts = ref(false)
-const productList = ref([])
-
-window.showProductPopup = (titles) => {
-    productList.value = titles.split(',').map((title) => title.trim())
-    showProducts.value = true
-}
-
-const clearFilter = () => {
-    Object.keys(form).forEach((key) => (form[key] = ''))
-}
-
-const submit = () => {
-    router.visit(route('order.index'), { data: form })
-}
-
-const loadAjaxData = () => {
-    const table = $('#ajax_table').DataTable({
-        responsive: true,
-        serverSide: true,
-        processing: true,
-        destroy: true,
-        lengthMenu: [
-            [10, 25, 50, 100, 200],
-            [10, 25, 50, 100, 200]
-        ],
-        ajax: {
-            url: $('#ajax_table').data('url'),
-            type: 'GET',
-            data: form
-        },
-        createdRow: (row, data) => {
-            if (data.is_complete) $(row).addClass('text-gray-700')
-            else $(row).addClass('text-red-700')
-        },
-        order: [[1, 'desc']],
-        columns: [
-            {
-                data: null,
-                render: (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1
-            },
-            { data: 'datetime_format' },
-            { data: 'waiter_name' },
-            { data: 'branch_invoice' },
-            {
-                data: 'detail',
-                sortable: false,
-                render: (data, type, row) =>
-                    `<span onclick="showProductPopup('${row.product_titles || ''}')" class="cursor-pointer text-primary-600 underline decoration-dotted">${data}</span>`
-            },
-            { data: 'discount_amount', class: 'text-right' },
-            { data: 'discount_type', class: 'text-right' },
-            { data: 'vat_amount', class: 'text-right' },
-            { data: 'total', class: 'text-right' },
-            {
-                data: 'actions',
-                orderable: false,
-                searchable: false,
-                render: (data) => `<div class="vue-actions" data-actions='${JSON.stringify(data).replace(/'/g, '&apos;')}'></div>`
-            }
-        ]
-    })
-
-    table.on('draw', () => {
-        document.querySelectorAll('.vue-actions').forEach((el) => {
-            if (el.dataset.vueMounted) return
-            const actions = JSON.parse(el.dataset.actions)
-
-            const ActionButtons = {
-                props: ['actions'],
-                components: { ArrowTopRightOnSquareIcon, PrinterIcon, PencilSquareIcon, TrashIcon },
-                setup(props) {
-                    return () =>
-                        h(
-                            'div',
-                            { class: 'flex justify-end space-x-2' },
-                            [
-                                props.actions.print_url &&
-                                    h('a', { href: props.actions.print_url, target: '_blank', class: 'text-green-600 hover:text-green-800' }, [
-                                        h(PrinterIcon, { class: 'w-6 h-6' })
-                                    ]),
-                                props.actions.show_url &&
-                                    h('a', { href: props.actions.show_url, target: '_blank', class: 'text-primary-600 hover:text-primary-800' }, [
-                                        h(ArrowTopRightOnSquareIcon, { class: 'w-6 h-6' })
-                                    ]),
-                                props.actions.edit_url &&
-                                    h('a', { href: props.actions.edit_url, class: 'text-indigo-600 hover:text-indigo-800' }, [h(PencilSquareIcon, { class: 'w-6 h-6' })]),
-                                props.actions.delete_id &&
-                                    h(
-                                        'button',
-                                        {
-                                            class: 'text-red-600 hover:text-red-800',
-                                            onClick: () => window.deleteRecord(props.actions.delete_id)
-                                        },
-                                        [h(TrashIcon, { class: 'w-6 h-6' })]
-                                    )
-                            ].filter(Boolean)
-                        )
-                }
-            }
-
-            createApp(ActionButtons, { actions }).mount(el)
-            el.dataset.vueMounted = 'true'
-        })
-    })
-}
-
-onMounted(() => {
-    loadAjaxData()
-})
-</script>
-
 <template>
     <Head title="Orders" />
 
@@ -281,3 +142,142 @@ onMounted(() => {
         </div>
     </AuthenticatedLayout>
 </template>
+
+<script setup>
+import { Head, router } from '@inertiajs/vue3'
+import { createApp, h, onMounted, reactive, ref } from 'vue'
+
+import Alert from '@/Components/Alert.vue'
+import Breadcrumb from '@/Components/Breadcrumb.vue'
+import Combobox from '@/Components/Combobox.vue'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+
+import { ArrowPathIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, TrashIcon } from '@heroicons/vue/24/outline'
+
+const props = defineProps({
+    filter: Object,
+    managers: Array,
+    waiters: Array,
+    customers: Array,
+    statuses: Array,
+    payment_methods: Array
+})
+
+const form = reactive(props.filter)
+
+const breadcrumbs = [
+    { name: 'Orders', href: route('order.index'), current: false },
+    { name: 'List Page', href: '#', current: false }
+]
+
+const showProducts = ref(false)
+const productList = ref([])
+
+window.showProductPopup = (titles) => {
+    productList.value = titles.split(',').map((title) => title.trim())
+    showProducts.value = true
+}
+
+const clearFilter = () => {
+    Object.keys(form).forEach((key) => (form[key] = ''))
+}
+
+const submit = () => {
+    router.visit(route('order.index'), { data: form })
+}
+
+const loadAjaxData = () => {
+    const table = $('#ajax_table').DataTable({
+        responsive: true,
+        serverSide: true,
+        processing: true,
+        destroy: true,
+        lengthMenu: [
+            [10, 25, 50, 100, 200],
+            [10, 25, 50, 100, 200]
+        ],
+        ajax: {
+            url: $('#ajax_table').data('url'),
+            type: 'GET',
+            data: form
+        },
+        createdRow: (row, data) => {
+            if (data.is_complete) $(row).addClass('text-gray-700')
+            else $(row).addClass('text-red-700')
+        },
+        order: [[1, 'desc']],
+        columns: [
+            {
+                data: null,
+                render: (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1
+            },
+            { data: 'datetime_format' },
+            { data: 'waiter_name' },
+            { data: 'branch_invoice' },
+            {
+                data: 'detail',
+                sortable: false,
+                render: (data, type, row) =>
+                    `<span onclick="showProductPopup('${row.product_titles || ''}')" class="cursor-pointer text-primary-600 underline decoration-dotted">${data}</span>`
+            },
+            { data: 'discount_amount', class: 'text-right' },
+            { data: 'discount_type', class: 'text-right' },
+            { data: 'vat_amount', class: 'text-right' },
+            { data: 'total', class: 'text-right' },
+            {
+                data: 'actions',
+                orderable: false,
+                searchable: false,
+                render: (data) => `<div class="vue-actions" data-actions='${JSON.stringify(data).replace(/'/g, '&apos;')}'></div>`
+            }
+        ]
+    })
+
+    table.on('draw', () => {
+        document.querySelectorAll('.vue-actions').forEach((el) => {
+            if (el.dataset.vueMounted) return
+            const actions = JSON.parse(el.dataset.actions)
+
+            const ActionButtons = {
+                props: ['actions'],
+                components: { ArrowTopRightOnSquareIcon, PrinterIcon, PencilSquareIcon, TrashIcon },
+                setup(props) {
+                    return () =>
+                        h(
+                            'div',
+                            { class: 'flex justify-end space-x-2' },
+                            [
+                                props.actions.print_url &&
+                                    h('a', { href: props.actions.print_url, target: '_blank', class: 'text-green-600 hover:text-green-800' }, [
+                                        h(PrinterIcon, { class: 'w-6 h-6' })
+                                    ]),
+                                props.actions.show_url &&
+                                    h('a', { href: props.actions.show_url, target: '_blank', class: 'text-primary-600 hover:text-primary-800' }, [
+                                        h(ArrowTopRightOnSquareIcon, { class: 'w-6 h-6' })
+                                    ]),
+                                props.actions.edit_url &&
+                                    h('a', { href: props.actions.edit_url, class: 'text-indigo-600 hover:text-indigo-800' }, [h(PencilSquareIcon, { class: 'w-6 h-6' })]),
+                                props.actions.delete_id &&
+                                    h(
+                                        'button',
+                                        {
+                                            class: 'text-red-600 hover:text-red-800',
+                                            onClick: () => window.deleteRecord(props.actions.delete_id)
+                                        },
+                                        [h(TrashIcon, { class: 'w-6 h-6' })]
+                                    )
+                            ].filter(Boolean)
+                        )
+                }
+            }
+
+            createApp(ActionButtons, { actions }).mount(el)
+            el.dataset.vueMounted = 'true'
+        })
+    })
+}
+
+onMounted(() => {
+    loadAjaxData()
+})
+</script>
