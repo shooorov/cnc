@@ -158,14 +158,15 @@ class OrderController extends Controller
         }
 
         $columns = [
-            0 => null,
+            0 => null, // S.N.
             1 => 'orders.date',
-            2 => 'orders.invoice_number',
-            3 => 'customers.name',
-            4 => 'orders.discount_amount',
-            5 => 'orders.vat_amount',
-            6 => 'orders.total',
-            7 => 'payment_methods.name',
+            2 => 'waiter.name',          // correct alias
+            3 => 'orders.invoice_number', // branch_invoice column is concatenated, cannot sort directly
+            4 => null,                   // detail, cannot sort (HTML / joined)
+            5 => 'orders.discount_amount',
+            6 => 'orders.discount_type',
+            7 => 'orders.vat_amount',
+            8 => 'orders.total',         // this should now work
         ];
 
         $baseQuery = Order::with('products.product')
@@ -252,7 +253,7 @@ class OrderController extends Controller
                     'vat_amount'            => $order->vat_amount,
                     'total'                 => $order->total,
                     'status'                => $order->status,
-                    'products'              => $order->products->map(fn($p) => ['name' => $p->product_name, 'quantity' => $p->quantity]),
+                    'products'              => $order->products->map(fn($p) => ['name' => $p->product_name, 'quantity' => $p->quantity, 'rate' => $p->rate]),
                     'actions'               => $actions,
                 ];
             }),

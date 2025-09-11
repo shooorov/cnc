@@ -90,8 +90,8 @@
                 <table class="table-auto sm:table-fixed min-w-full w-full" id="ajax_table" :data-url="route('order.load')">
                     <thead>
                         <tr>
-                            <th class="w-3 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">S.N.</th>
-                            <th class="w-10 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">Date</th>
+                            <th class="w-3 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">S.N.</th>
+                            <th class="w-10 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">Date <br> dmY</th>
                             <th class="w-10 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">Waiter</th>
                             <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">Number</th>
                             <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">Des</th>
@@ -113,29 +113,14 @@
     </div>
 
     <!-- Product Popup -->
-    <div v-if="showProducts" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showProducts = false">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 max-w-lg max-h-[80vh] p-6 relative overflow-hidden">
-            <button @click="showProducts = false" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700 transition">✕</button>
-            <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Products List</h2>
-            <div class="overflow-y-auto max-h-[60vh] pr-2 custom-scrollbar">
-                <ul class="space-y-2 text-gray-700 text-sm">
-                    <li v-for="(item, index) in productList" :key="index" class="flex justify-between px-2 py-1 border-b border-gray-200">
-                        <span class="font-medium">{{ item.name }}</span>
-                        <span class="font-semibold">{{ item.quantity }}</span>
-                    </li>
-                </ul>
-            </div>
-            <div class="mt-5 flex justify-end">
-                <button @click="showProducts = false" class="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">Close</button>
-            </div>
-        </div>
-    </div>
+    <OrderDetailsModal :show="showProducts" :products="productList" @close="showProducts = false" />
 </template>
 
 <script setup>
 import Alert from '@/Components/Alert.vue'
 import Breadcrumb from '@/Components/Breadcrumb.vue'
 import Combobox from '@/Components/Combobox.vue'
+import OrderDetailsModal from '@/Components/OrderDetailsModal.vue'
 import AppLayout from '@/Layouts/AuthenticatedLayout.vue'
 
 import { ArrowPathIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, TrashIcon } from '@heroicons/vue/24/outline'
@@ -195,14 +180,16 @@ const loadAjaxData = () => {
         columns: [
             { data: null, render: (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1 },
             { data: 'datetime_format' },
-            { data: 'waiter_name', orderable: false },
+            { data: 'waiter_name' },
             { data: 'branch_invoice' },
             {
                 data: 'detail',
                 sortable: false,
                 render: (data, type, row) => {
                     // Pass products array safely to the modal
-                    return `<span onclick='showProductPopup(${JSON.stringify(row.products || [])})' class="cursor-pointer text-primary-600 underline decoration-dotted">${data}</span>`
+                    return `<span onclick='showProductPopup(${JSON.stringify(
+                        row.products || []
+                    )})' class="cursor-pointer text-primary-600 underline decoration-dotted">${data}</span>`
                 }
             },
             { data: 'discount_amount', className: 'text-right' },
