@@ -157,7 +157,6 @@ class OrderController extends Controller
             $start_date = Helpers::dayStartedAt();
         }
 
-        // Column mapping for sorting/searching
         $columns = [
             0 => null,
             1 => 'orders.date',
@@ -169,7 +168,7 @@ class OrderController extends Controller
             7 => 'payment_methods.name',
         ];
 
-        $baseQuery = Order::query()
+        $baseQuery = Order::with('products.product')
             ->select(
                 'orders.*',
                 'customers.name as customer_name',
@@ -180,53 +179,30 @@ class OrderController extends Controller
             ->leftJoin('customers', 'customers.id', '=', 'orders.customer_id')
             ->leftJoin('payment_methods', 'payment_methods.id', '=', 'orders.payment_method_id')
             ->leftJoin('users as manager', 'manager.id', '=', 'orders.manager_id')
-            ->leftJoin('users as waiter', 'waiter.id', '=', 'orders.waiter_id')
-            ->with('products'); // eager load items for product_titles
+            ->leftJoin('users as waiter', 'waiter.id', '=', 'orders.waiter_id');
 
-        // Apply filters
-        if ($start_date) {
-            $baseQuery->where('orders.date', '>=', $start_date);
-        }
-        if ($end_date) {
-            $baseQuery->where('orders.date', '<=', $end_date);
-        }
-        if ($manager_id) {
-            $baseQuery->where('orders.manager_id', $manager_id);
-        }
-        if ($waiter_id) {
-            $baseQuery->where('orders.waiter_id', $waiter_id);
-        }
-        if ($status) {
-            $baseQuery->where('orders.status', $status);
-        }
-        if ($customer_id) {
-            $baseQuery->where('orders.customer_id', $customer_id);
-        }
-        if ($payment_method_id) {
-            $baseQuery->where('orders.payment_method_id', $payment_method_id);
-        }
-        if ($isThirtyparcenton && !$request->user()->is_admin) {
-            $baseQuery->where('orders.vat_add', 1);
-        }
+        // Filters
+        if ($start_date) $baseQuery->where('orders.date', '>=', $start_date);
+        if ($end_date) $baseQuery->where('orders.date', '<=', $end_date);
+        if ($manager_id) $baseQuery->where('orders.manager_id', $manager_id);
+        if ($waiter_id) $baseQuery->where('orders.waiter_id', $waiter_id);
+        if ($status) $baseQuery->where('orders.status', $status);
+        if ($customer_id) $baseQuery->where('orders.customer_id', $customer_id);
+        if ($payment_method_id) $baseQuery->where('orders.payment_method_id', $payment_method_id);
+        if ($isThirtyparcenton && !$request->user()->is_admin) $baseQuery->where('orders.vat_add', 1);
 
-        // Total count before search
         $recordsTotal = (clone $baseQuery)->count();
 
-        // Clone and apply search
         $query = clone $baseQuery;
 
-        // Column-specific search
         if ($request->columns && is_array($request->columns)) {
             foreach ($request->columns as $index => $col) {
                 $colSearch = $col['search']['value'] ?? null;
                 $colName = $columns[$index] ?? null;
-                if ($colSearch && $colName) {
-                    $query->where($colName, 'like', '%' . $colSearch . '%');
-                }
+                if ($colSearch && $colName) $query->where($colName, 'like', '%' . $colSearch . '%');
             }
         }
 
-        // Global search
         if ($filter) {
             $query->where(function ($q) use ($filter) {
                 $q->where('orders.invoice_number', 'like', '%' . $filter . '%')
@@ -238,20 +214,12 @@ class OrderController extends Controller
             });
         }
 
-        // Filtered count after search
         $recordsFiltered = (clone $query)->count();
 
-        // Sorting
-        if (!empty($columns[$sort_column])) {
-            $query->orderBy($columns[$sort_column], $sort_dir);
-        } else {
-            $query->orderBy('orders.date', 'desc');
-        }
+        if (!empty($columns[$sort_column])) $query->orderBy($columns[$sort_column], $sort_dir);
+        else $query->orderBy('orders.date', 'desc');
 
-        // Pagination
-        if ($length > 0) {
-            $query->offset($start)->limit($length);
-        }
+        if ($length > 0) $query->offset($start)->limit($length);
 
         $records = $query->get();
 
@@ -271,7 +239,7 @@ class OrderController extends Controller
                     'branch_name'           => $order->branch->name,
                     'waiter_name'           => $order->waiter_name,
                     'invoice_number'        => $order->invoice_number,
-                    'branch_invoice'        => $order->branch->name . ' | ' . $order->invoice_number,
+                    'branch_invoice'        => $order->branch->name . '<br>' . $order->invoice_number,
                     'datetime_format'       => $order->datetime_format,
                     'payment_method_name'   => $order->payment_method_name,
                     'discount_amount'       => $order->discount_amount,
@@ -284,7 +252,7 @@ class OrderController extends Controller
                     'vat_amount'            => $order->vat_amount,
                     'total'                 => $order->total,
                     'status'                => $order->status,
-                    'product_titles'        => $order->products->pluck('product_name')->join(', '),
+                    'products'              => $order->products->map(fn($p) => ['name' => $p->product_name, 'quantity' => $p->quantity]),
                     'actions'               => $actions,
                 ];
             }),
