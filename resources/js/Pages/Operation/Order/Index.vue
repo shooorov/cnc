@@ -90,11 +90,11 @@
                 <table class="table-auto sm:table-fixed min-w-full w-full" id="ajax_table" :data-url="route('order.load')">
                     <thead>
                         <tr>
-                            <th class="w-3 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">S.N.</th>
-                            <th class="w-10 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">Date <br> dmY</th>
-                            <th class="w-10 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">Waiter</th>
-                            <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">Number</th>
-                            <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-left">Des</th>
+                            <th class="w-5 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">#</th>
+                            <th class="w-10 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Date<br />dmY</th>
+                            <th class="w-10 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Waiter</th>
+                            <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Number</th>
+                            <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Des</th>
                             <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">Discount</th>
                             <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">Type</th>
                             <!-- hide for cnc only -->
@@ -178,13 +178,14 @@ const loadAjaxData = () => {
         },
         order: [[1, 'desc']],
         columns: [
-            { data: null, render: (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1 },
-            { data: 'datetime_format' },
-            { data: 'waiter_name' },
-            { data: 'branch_invoice' },
+            { data: null, render: (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1, className: 'text-center' },
+            { data: 'datetime_format', className: 'text-center' },
+            { data: 'waiter_name', className: 'text-center' },
+            { data: 'branch_invoice', className: 'text-center' },
             {
                 data: 'detail',
                 sortable: false,
+                className: 'text-center',
                 render: (data, type, row) => {
                     // Pass products array safely to the modal
                     return `<span onclick='showProductPopup(${JSON.stringify(
