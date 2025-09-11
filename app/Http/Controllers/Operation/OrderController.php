@@ -169,7 +169,6 @@ class OrderController extends Controller
             7 => 'payment_methods.name',
         ];
 
-        // Base query with joins for related columns
         $baseQuery = Order::query()
             ->select(
                 'orders.*',
@@ -181,7 +180,8 @@ class OrderController extends Controller
             ->leftJoin('customers', 'customers.id', '=', 'orders.customer_id')
             ->leftJoin('payment_methods', 'payment_methods.id', '=', 'orders.payment_method_id')
             ->leftJoin('users as manager', 'manager.id', '=', 'orders.manager_id')
-            ->leftJoin('users as waiter', 'waiter.id', '=', 'orders.waiter_id');
+            ->leftJoin('users as waiter', 'waiter.id', '=', 'orders.waiter_id')
+            ->with('products'); // eager load items for product_titles
 
         // Apply filters
         if ($start_date) {
@@ -265,25 +265,26 @@ class OrderController extends Controller
                 $actions['detail_url'] = RolePermission::isRouteValid('order.show') ? route('order.show', $order->id) : null;
                 $actions['edit_url'] = UseBranch::id() && RolePermission::isRouteValid('pos.create') ? route('pos.create', $order->id) : null;
                 $actions['destroy_url'] = UseBranch::id() && RolePermission::isRouteValid('order.destroy') ? route('order.destroy', $order->id) : null;
+
                 return [
                     'id'                    => $order->id,
                     'branch_name'           => $order->branch->name,
                     'waiter_name'           => $order->waiter_name,
                     'invoice_number'        => $order->invoice_number,
-                    'branch_invoice'        => $order->branch->name . '<br>' . $order->invoice_number,
+                    'branch_invoice'        => $order->branch->name . ' | ' . $order->invoice_number,
                     'datetime_format'       => $order->datetime_format,
                     'payment_method_name'   => $order->payment_method_name,
                     'discount_amount'       => $order->discount_amount,
                     'discount_type'         => $order->discount_type,
                     'member_code'           => $order->member_code,
                     'member_discount'       => $order->member_discount,
-                    'is_complete'           => $order->status === 'complete' || ! empty($order->cash),
-
-                    'detail'                => collect([$order->description, $order->payment_method_name,])->filter(fn($i) => $i)->join('<br>'),
+                    'is_complete'           => $order->status === 'complete' || !empty($order->cash),
+                    'detail'                => collect([$order->description, $order->payment_method_name])->filter(fn($i) => $i)->join('<br>'),
                     'description'           => $order->description,
                     'vat_amount'            => $order->vat_amount,
                     'total'                 => $order->total,
                     'status'                => $order->status,
+                    'product_titles'        => $order->products->pluck('product_name')->join(', '),
                     'actions'               => $actions,
                 ];
             }),

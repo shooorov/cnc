@@ -212,7 +212,10 @@ const loadAjaxData = () => {
                 render: (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1
             },
             { data: 'datetime_format' },
-            { data: 'waiter_name' },
+            {
+                data: 'waiter_name',
+                orderable: false
+            },
             { data: 'branch_invoice' },
             {
                 data: 'detail',
