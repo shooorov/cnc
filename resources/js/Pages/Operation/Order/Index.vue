@@ -32,7 +32,7 @@
                 <Alert />
 
                 <form @submit.prevent="submit">
-                    <dl class="px-5 py-5 mx-auto max-w-5xl">
+                    <dl class="p-5 mx-auto max-w-5xl">
                         <div class="py-2 sm:grid sm:grid-cols-8 sm:gap-4">
                             <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700">Manager</label>
@@ -91,19 +91,19 @@
                     <thead>
                         <tr>
                             <th class="w-5 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">#</th>
-                            <th class="w-10 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Date<br />dmY</th>
-                            <th class="w-10 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Waiter</th>
-                            <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Number</th>
-                            <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Des</th>
-                            <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">Discount</th>
-                            <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">Type</th>
+                            <th class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Date<br />dmY</th>
+                            <th class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Waiter</th>
+                            <th class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Number</th>
+                            <th class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Description</th>
+                            <th class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">Discount</th>
+                            <th class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">Type</th>
                             <!-- hide for cnc only -->
-                            <!-- <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">M. Code</th>
-                                                    <th class="w-12 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">M. Discount</th> -->
+                            <!-- <th class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">M. Code</th>
+                                                    <th class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">M. Discount</th> -->
 
-                            <th class="w-8 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">VAT</th>
-                            <th class="w-8 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">Total</th>
-                            <th class="w-20 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">Action</th>
+                            <th class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">VAT</th>
+                            <th class="px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-right">Total</th>
+                            <th class="w-24 px-5 py-2 border-b bg-gray-100 text-xs font-bold uppercase tracking-wider text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white"></tbody>
@@ -167,6 +167,8 @@ const loadAjaxData = () => {
             [10, 25, 50, 100, 200],
             [10, 25, 50, 100, 200]
         ],
+        length: 10,
+        dom: "<'flex flex-col sm:flex-row justify-between'lf><'block overflow-auto 'rt><'flex flex-col sm:flex-row justify-between items-center'ip>",
         ajax: {
             url: $('#ajax_table').data('url'),
             type: 'GET',
@@ -178,14 +180,18 @@ const loadAjaxData = () => {
         },
         order: [[1, 'desc']],
         columns: [
-            { data: null, render: (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1, className: 'text-center' },
-            { data: 'datetime_format', className: 'text-center' },
-            { data: 'waiter_name', className: 'text-center' },
-            { data: 'branch_invoice', className: 'text-center' },
+            {
+                data: null,
+                class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-center',
+                render: (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1
+            },
+            { data: 'datetime_format', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-center' },
+            { data: 'waiter_name', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-center' },
+            { data: 'branch_invoice', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-center' },
             {
                 data: 'detail',
+                class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-center',
                 sortable: false,
-                className: 'text-center',
                 render: (data, type, row) => {
                     // Pass products array safely to the modal
                     return `<span onclick='showProductPopup(${JSON.stringify(
@@ -193,12 +199,36 @@ const loadAjaxData = () => {
                     )})' class="cursor-pointer text-primary-600 underline decoration-dotted">${data}</span>`
                 }
             },
-            { data: 'discount_amount', className: 'text-right' },
-            { data: 'discount_type', className: 'text-right' },
-            { data: 'vat_amount', className: 'text-right' },
-            { data: 'total', className: 'text-right' },
+            { data: 'discount_amount', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right' },
+            {
+                data: 'discount_type',
+                class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right',
+                render: function (data, type, row) {
+                    if (!data) return ''
+
+                    // Map discount types to badge colors
+                    const badgeColors = {
+                        percent: 'bg-green-100 text-green-800',
+                        flat: 'bg-blue-100 text-blue-800'
+                    }
+
+                    const badgeClass = badgeColors[data] || 'bg-gray-200 text-gray-800'
+
+                    // Get human-readable name from the list
+                    const discountNames = {
+                        percent: 'Percent',
+                        flat: 'Flat'
+                    }
+                    const displayName = discountNames[data] || data
+
+                    return `<span class="px-2 py-1 rounded-full text-xs font-semibold ${badgeClass}">${displayName}</span>`
+                }
+            },
+            { data: 'vat_amount', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right' },
+            { data: 'total', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right' },
             {
                 data: 'actions',
+                class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5',
                 orderable: false,
                 searchable: false,
                 render: (data) => `<div class="vue-actions" data-actions='${JSON.stringify(data).replace(/'/g, '&apos;')}'></div>`
