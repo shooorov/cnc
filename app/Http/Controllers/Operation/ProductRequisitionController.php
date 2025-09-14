@@ -109,6 +109,7 @@ class ProductRequisitionController extends Controller
 
             'group_items.*.id' => ['required', 'exists:products,id'],
             'group_items.*.quantity' => ['nullable', 'numeric'],
+            'group_items.*.rate' => ['nullable', 'numeric'],
             'group_items.*.avg_rate' => ['nullable', 'numeric'],
             'group_items.*.total' => ['nullable', 'numeric'],
         ]);
@@ -127,6 +128,7 @@ class ProductRequisitionController extends Controller
             if ($quantity > 0) {
                 ProductRequisitionItem::create([
                     'quantity' => $item['quantity'],
+                    'rate' => $item['rate'],
                     'avg_rate' => $item['avg_rate'],
                     'total' => $item['total'],
                     'product_id' => $item['id'],
