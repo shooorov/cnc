@@ -14,7 +14,7 @@
 
     <!-- Filters -->
     <div class="py-5">
-        <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-full mx-auto sm:px-6 lg:px-8">
             <div class="bg-white shadow sm:rounded-lg">
                 <div class="flex flex-col sm:flex-row sm:justify-between items-center px-4 py-5 border-b border-gray-200 sm:px-8">
                     <div class="flex-1">
@@ -113,7 +113,7 @@
     </div>
 
     <!-- Product Popup -->
-    <OrderDetailsModal :show="showProducts" :products="productList" @close="showProducts = false" />
+    <OrderDetailsModal :show="showProducts" :products="productList" :vat="vatAmount" @close="showProducts = false" />
 </template>
 
 <script setup>
@@ -124,7 +124,7 @@ import OrderDetailsModal from '@/Components/OrderDetailsModal.vue'
 import AppLayout from '@/Layouts/AuthenticatedLayout.vue'
 
 import { ArrowPathIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, TrashIcon } from '@heroicons/vue/24/outline'
-import { Head, router } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import { createApp, h, onMounted, reactive, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
@@ -146,16 +146,24 @@ const breadcrumbs = [
 
 const showProducts = ref(false)
 const productList = ref([])
+const vatAmount = ref('')
 
-// Function to open the modal with products
-window.showProductPopup = (products) => {
+window.showProductPopup = (products, vat) => {
     if (!products || !products.length) return
-    productList.value = products // assign array directly
+    productList.value = products
+    vatAmount.value = vat
     showProducts.value = true
 }
 
 const clearFilter = () => Object.keys(filter).forEach((k) => (filter[k] = ''))
 const submit = () => router.visit(route('order.index'), { data: filter })
+
+function deleteRecord(id) {
+    if (confirm('Are you sure you want to delete this order?')) {
+        router.delete(route('order.destroy', id))
+    }
+}
+window.deleteRecord = deleteRecord
 
 const loadAjaxData = () => {
     const table = $('#ajax_table').DataTable({
@@ -167,7 +175,6 @@ const loadAjaxData = () => {
             [10, 25, 50, 100, 200],
             [10, 25, 50, 100, 200]
         ],
-        length: 10,
         dom: "<'flex flex-col sm:flex-row justify-between'lf><'block overflow-auto 'rt><'flex flex-col sm:flex-row justify-between items-center'ip>",
         ajax: {
             url: $('#ajax_table').data('url'),
@@ -193,39 +200,24 @@ const loadAjaxData = () => {
                 class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-center',
                 sortable: false,
                 render: (data, type, row) => {
-                    // Pass products array safely to the modal
-                    return `<span onclick='showProductPopup(${JSON.stringify(
-                        row.products || []
-                    )})' class="cursor-pointer text-primary-600 underline decoration-dotted">${data}</span>`
+                    return `<span onclick='showProductPopup(${JSON.stringify(row.products || [])},${
+                        row.vat_amount
+                    })' class="cursor-pointer text-primary-600 underline decoration-dotted">${data}</span>`
                 }
             },
-            { data: 'discount_amount', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right' },
+            { data: 'discount_amount_formated', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right' },
             {
                 data: 'discount_type',
                 class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right',
-                render: function (data, type, row) {
+                render: (data) => {
                     if (!data) return ''
-
-                    // Map discount types to badge colors
-                    const badgeColors = {
-                        percent: 'bg-green-100 text-green-800',
-                        flat: 'bg-blue-100 text-blue-800'
-                    }
-
-                    const badgeClass = badgeColors[data] || 'bg-gray-200 text-gray-800'
-
-                    // Get human-readable name from the list
-                    const discountNames = {
-                        percent: 'Percent',
-                        flat: 'Flat'
-                    }
-                    const displayName = discountNames[data] || data
-
-                    return `<span class="px-2 py-1 rounded-full text-xs font-semibold ${badgeClass}">${displayName}</span>`
+                    const badgeColors = { percent: 'bg-green-100 text-green-800', flat: 'bg-blue-100 text-blue-800' }
+                    const discountNames = { percent: 'Percent', flat: 'Flat' }
+                    return `<span class="px-2 py-1 rounded-full text-xs font-semibold ${badgeColors[data] || 'bg-gray-200 text-gray-800'}">${discountNames[data] || data}</span>`
                 }
             },
-            { data: 'vat_amount', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right' },
-            { data: 'total', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right' },
+            { data: 'vat_amount_formated', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right' },
+            { data: 'total_formated', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right' },
             {
                 data: 'actions',
                 class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5',
@@ -242,7 +234,7 @@ const loadAjaxData = () => {
             const actions = JSON.parse(el.dataset.actions)
             const ActionButtons = {
                 props: ['actions'],
-                components: { ArrowTopRightOnSquareIcon, PrinterIcon, PencilSquareIcon, TrashIcon },
+                components: { Link, ArrowTopRightOnSquareIcon, PrinterIcon, PencilSquareIcon, TrashIcon },
                 setup(props) {
                     return () =>
                         h(
@@ -254,19 +246,24 @@ const loadAjaxData = () => {
                                         h(PrinterIcon, { class: 'w-6 h-6' })
                                     ]),
                                 props.actions.detail_url &&
-                                    h('a', { href: props.actions.detail_url, target: '_blank', class: 'text-primary-600 hover:text-primary-800' }, [
+                                    h(Link, { href: props.actions.detail_url, class: 'text-primary-600 hover:text-primary-800' }, [
                                         h(ArrowTopRightOnSquareIcon, { class: 'w-6 h-6' })
                                     ]),
                                 props.actions.edit_url &&
-                                    h('a', { href: props.actions.edit_url, class: 'text-indigo-600 hover:text-indigo-800' }, [h(PencilSquareIcon, { class: 'w-6 h-6' })]),
-                                props.actions.destroy_url &&
-                                    h('button', { class: 'text-red-600 hover:text-red-800', onClick: () => window.deleteRecord(props.actions.destroy_url) }, [
+                                    h(
+                                        Link,
+                                        { href: props.actions.edit_url, class: 'text-indigo-600 hover:text-indigo-800' },
+                                        { default: () => h(PencilSquareIcon, { class: 'w-6 h-6' }) }
+                                    ),
+                                props.actions.delete_id &&
+                                    h('button', { class: 'text-red-600 hover:text-red-800', onClick: () => window.deleteRecord(props.actions.delete_id) }, [
                                         h(TrashIcon, { class: 'w-6 h-6' })
                                     ])
                             ].filter(Boolean)
                         )
                 }
             }
+
             createApp(ActionButtons, { actions }).mount(el)
             el.dataset.vueMounted = 'true'
         })
