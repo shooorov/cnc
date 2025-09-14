@@ -48,7 +48,7 @@ class Requisition extends JsonResource
             // $requisition_item = RequisitionItem::where('item_id', $item->id)->where('requisition_id', $this->id)->first();
             $requisition_item = CacheRequisitionItem::get()
                 ->where('item_id', $item->id)->where('requisition_id', $this->id)
-                ->first(fn ($i) => $i->item_id == $item->id);
+                ->first(fn($i) => $i->item_id == $item->id);
 
             $manipulated_item = $item;
             if ($requisition_item) {

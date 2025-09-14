@@ -25,10 +25,7 @@ class ProductRequisition extends Model
      *
      * @var array
      */
-    protected $appends = [
-        'name',
-        'datetime_format',
-    ];
+    protected $appends = [];
 
     /**
      * The "booted" method of the model.
@@ -48,29 +45,5 @@ class ProductRequisition extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
-    }
-
-    /**
-     * Get the datetime format.
-     */
-    public function datetimeFormat(): Attribute
-    {
-        return Attribute::get(fn () => $this->date->format('d/m/Y h:i A'));
-    }
-
-    /**
-     * Get the branch_name.
-     */
-    public function branchName(): Attribute
-    {
-        return Attribute::get(fn () => $this->branch->name);
-    }
-
-    /**
-     * Get the name.
-     */
-    public function name(): Attribute
-    {
-        return Attribute::get(fn () => "$this->branch_name - $this->datetime_format");
     }
 }

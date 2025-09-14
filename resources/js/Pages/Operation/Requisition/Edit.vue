@@ -123,18 +123,18 @@
 </template>
 
 <script>
+import { Head, Link, router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
-import { router, Head, Link } from '@inertiajs/vue3';
 
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Breadcrumb from '@/Components/Breadcrumb.vue';
 import Alert from '@/Components/Alert.vue';
+import Breadcrumb from '@/Components/Breadcrumb.vue';
 import InputError from '@/Components/InputError.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 
 import {
-    PlusIcon,
     MinusIcon,
+    PlusIcon,
 } from '@heroicons/vue/24/solid';
 
 import {

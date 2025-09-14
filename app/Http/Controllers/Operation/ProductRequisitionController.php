@@ -13,6 +13,7 @@ use App\Models\ProductRequisition;
 use App\Models\ProductRequisitionItem;
 use App\RolePermission;
 use App\UseBranch;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -49,6 +50,11 @@ class ProductRequisitionController extends Controller
         $product_requisitions = CacheProductRequisition::get()
             ->where('date', '>=', $start_date)
             ->where('date', '<=', $end_date);
+
+        foreach ($product_requisitions as $item) {
+            $item->date_format = $item->date->format('d/m/Y');
+            $item->description = $item->products->count();
+        }
 
         $params = [
             'requisitions' => $product_requisitions,
@@ -143,6 +149,8 @@ class ProductRequisitionController extends Controller
      */
     public function show(ProductRequisition $product_requisition)
     {
+        $product_requisition->date_format = $product_requisition->date->format('d/m/Y');
+        $product_requisition->name = $product_requisition->branch->name . ' - ' . $product_requisition->date_format;
         $product_requisition->products;
         $params = [
             'requisition' => $product_requisition,
@@ -158,6 +166,7 @@ class ProductRequisitionController extends Controller
      */
     public function edit(ProductRequisition $product_requisition)
     {
+        // dd($product_requisition->date);
         $product_requisition->products;
         $params = [
             'requisition' => $product_requisition,
@@ -185,7 +194,7 @@ class ProductRequisitionController extends Controller
         ]);
 
         DB::beginTransaction();
-        $product_requisition->date = now()->parse($request->requisition_date);
+        $product_requisition->date = Carbon::parse($request->requisition_date);
         $product_requisition->total = $request->total;
         $product_requisition->save();
 
