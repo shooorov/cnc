@@ -202,7 +202,7 @@ const loadAjaxData = () => {
                 render: (data, type, row) => {
                     return `<span onclick='showProductPopup(${JSON.stringify(row.products || [])},${
                         row.vat_amount
-                    })' class="cursor-pointer text-primary-600 underline decoration-dotted">${data}</span>`
+                    })' class="cursor-pointer underline decoration-dotted">${data}</span>`
                 }
             },
             { data: 'discount_amount_formated', class: 'p-1 sm:py-2 whitespace-wrap border-b border-gray-200 text-sm leading-5 text-right' },

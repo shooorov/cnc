@@ -11,25 +11,28 @@
 
                 <!-- Products List -->
                 <ul class="space-y-2 text-gray-700 text-sm">
-                    <li v-for="(item, index) in products" :key="index" class="grid grid-cols-4 gap-2 px-2 py-1 border-b border-gray-200">
-                        <span class="font-medium col-span-3 flex flex-col">
+                    <li v-for="(item, index) in products" :key="index" class="grid grid-cols-6 gap-2 px-2 py-1 border-b border-gray-200">
+                        <!-- Left cell: iteration + name on left, qty × rate on right -->
+                        <div class="flex justify-between items-center font-mono col-span-5">
                             <span>{{ index + 1 }}. {{ item.name }}</span>
-                            <span class="text-xs text-gray-500 self-end"> ({{ formatNumber(item.quantity) }}pc × {{ formatNumber(item.rate) }}) </span>
-                        </span>
-                        <span class="font-semibold text-right"> ৳ {{ formatNumber(item.quantity * item.rate) }} </span>
+                            <span class="text-xs text-gray-500">({{ formatNumber(item.quantity) }} pc × {{ formatNumber(item.rate) }})</span>
+                        </div>
+
+                        <!-- Right cell: total -->
+                        <span class="font-mono text-right">৳ {{ formatNumber(item.quantity * item.rate) }}</span>
                     </li>
                 </ul>
 
                 <!-- Totals -->
                 <div class="mt-4 border-t pt-3 grid grid-cols-2 gap-2 font-bold text-gray-800">
-                    <span>Subtotal</span>
-                    <span class="font-semibold text-right mr-4">৳ {{ formatNumber(subTotal) }}</span>
+                    <span class="font-mono">Subtotal</span>
+                    <span class="font-mono text-right mr-2">৳ {{ formatNumber(subTotal) }}</span>
 
-                    <span>VAT</span>
-                    <span class="font-semibold text-right mr-4">৳ {{ formatNumber(vat) }}</span>
+                    <span class="font-mono">VAT</span>
+                    <span class="font-mono text-right mr-2">৳ {{ formatNumber(vat) }}</span>
 
-                    <span>Grand Total</span>
-                    <span class="font-semibold text-right mr-4">৳ {{ formatNumber(grandTotal) }}</span>
+                    <span class="font-mono">Grand Total</span>
+                    <span class="font-mono text-right mr-2">৳ {{ formatNumber(grandTotal) }}</span>
                 </div>
 
                 <!-- Footer -->
