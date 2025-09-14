@@ -1,42 +1,36 @@
 <template>
     <div v-if="show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="$emit('close')">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 max-w-lg max-h-[80vh] p-6 relative flex flex-col overflow-hidden">
-            <!-- Close Button: fixed inside modal -->
-            <button @click="$emit('close')" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700 transition z-10" aria-label="Close Modal">✕</button>
+        <div class="bg-white rounded-xl shadow-2xl w-11/12 sm:w-10/12 md:w-96 max-h-[90vh] flex flex-col overflow-hidden relative">
+            <!-- Sticky Header -->
+            <div class="sticky top-0 bg-white z-20 p-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-800">Order Details</h2>
+                <button @click="$emit('close')" class="text-gray-400 hover:text-gray-700 transition" aria-label="Close Modal">✕</button>
+            </div>
 
-            <!-- Content Wrapper: scrollable -->
-            <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                <!-- Header -->
-                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Order Details</h2>
-
-                <!-- Products List -->
+            <!-- Product List: scrollable -->
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 <ul class="space-y-2 text-gray-700 text-sm">
-                    <li v-for="(item, index) in products" :key="index" class="grid grid-cols-6 gap-2 px-2 py-1 border-b border-gray-200">
-                        <!-- Left cell: iteration + name on left, qty × rate on right -->
-                        <div class="flex justify-between items-center font-mono col-span-5">
-                            <span>{{ index + 1 }}. {{ item.name }}</span>
-                            <span class="text-xs text-gray-500">({{ formatNumber(item.quantity) }} pc × {{ formatNumber(item.rate) }})</span>
-                        </div>
-
-                        <!-- Right cell: total -->
-                        <span class="font-mono text-right">৳ {{ formatNumber(item.quantity * item.rate) }}</span>
+                    <li v-for="(item, index) in products" :key="index" class="grid grid-cols-7 gap-2 px-2 py-1 border-b border-gray-200">
+                        <span class="font-mono col-span-3 truncate" :title="item.name">{{ index + 1 }}. {{ item.name }}</span>
+                        <span class="font-mono text-xs text-gray-500 text-right col-span-2"> ({{ formatNumber(item.quantity) }} pc × {{ formatNumber(item.rate) }}) </span>
+                        <span class="font-mono text-right col-span-2"> ৳ {{ formatNumber(item.quantity * item.rate) }} </span>
                     </li>
                 </ul>
+            </div>
 
-                <!-- Totals -->
-                <div class="mt-4 border-t pt-3 grid grid-cols-2 gap-2 font-bold text-gray-800">
+            <!-- Sticky Footer: totals and button -->
+            <div class="sticky bottom-0 bg-white z-20 p-4 border-t border-gray-200">
+                <div class="grid grid-cols-2 gap-2 font-bold text-gray-800 mb-3">
                     <span class="font-mono">Subtotal</span>
-                    <span class="font-mono text-right mr-2">৳ {{ formatNumber(subTotal) }}</span>
+                    <span class="font-mono text-right">৳ {{ formatNumber(subTotal) }}</span>
 
                     <span class="font-mono">VAT</span>
-                    <span class="font-mono text-right mr-2">৳ {{ formatNumber(vat) }}</span>
+                    <span class="font-mono text-right">৳ {{ formatNumber(vat) }}</span>
 
                     <span class="font-mono">Grand Total</span>
-                    <span class="font-mono text-right mr-2">৳ {{ formatNumber(grandTotal) }}</span>
+                    <span class="font-mono text-right">৳ {{ formatNumber(grandTotal) }}</span>
                 </div>
-
-                <!-- Footer -->
-                <div class="mt-5 flex justify-end">
+                <div class="flex justify-end">
                     <button @click="$emit('close')" class="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">Close</button>
                 </div>
             </div>
@@ -50,45 +44,36 @@ import { computed } from 'vue'
 const props = defineProps({
     show: { type: Boolean, default: false },
     products: { type: Array, default: () => [] }, // [{ name, quantity, rate }]
-    vat: { type: Number, default: 0 } // VAT amount sent from backend
+    vat: { type: Number, default: 0 }
 })
 
-// Subtotal = sum of product totals
-const subTotal = computed(() => {
-    return props.products.reduce((sum, item) => sum + item.quantity * item.rate, 0)
-})
+// Subtotal
+const subTotal = computed(() => props.products.reduce((sum, item) => sum + item.quantity * item.rate, 0))
 
-// Grand total = subtotal + VAT
-const grandTotal = computed(() => {
-    return subTotal.value + props.vat
-})
+// Grand total
+const grandTotal = computed(() => subTotal.value + props.vat)
 
-// Helper for clean number formatting (no decimals, commas)
-const formatNumber = (num) => {
-    return Number(num).toLocaleString('en-US', { maximumFractionDigits: 0 })
-}
+// Format numbers (no decimals, commas)
+const formatNumber = (num) => Number(num).toLocaleString('en-US', { maximumFractionDigits: 0 })
 </script>
 
 <style scoped>
-/* Custom scrollbar for product list */
+/* Thin, subtle scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-    width: 4px; /* very thin */
+    width: 4px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent; /* make track invisible */
+    background: transparent;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.15); /* very light gray */
-    border-radius: 9999px; /* rounded */
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 9999px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(0, 0, 0, 0.25); /* slightly darker on hover */
+    background-color: rgba(0, 0, 0, 0.25);
 }
 
-/* For Firefox */
+/* Firefox */
 .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
