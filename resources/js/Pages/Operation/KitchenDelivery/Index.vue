@@ -117,98 +117,68 @@
     </div>
 </template>
 
-<script>
+<script setup>
 import { Head, Link, router } from '@inertiajs/vue3'
-import { reactive } from 'vue'
+import { onMounted, reactive } from 'vue'
 
 import Alert from '@/Components/Alert.vue'
 import Breadcrumb from '@/Components/Breadcrumb.vue'
-import StatusOptions from '@/Components/StatusOptions.vue'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-
-import Status from '@/Components/Status.vue'
-
-import { MinusIcon, PlusIcon } from '@heroicons/vue/24/solid'
+import AppLayout from '@/Layouts/AuthenticatedLayout.vue'
 
 import { ArrowPathIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon } from '@heroicons/vue/24/solid'
 
-export default {
-    layout: AuthenticatedLayout,
+// Set layout
+defineOptions({ layout: AppLayout })
 
-    components: {
-        Alert,
-        Breadcrumb,
-        Head,
-        Link,
-        Status,
-        StatusOptions,
+// Props
+const props = defineProps({
+    filter: Object,
+    string_change: Object,
+    kitchen_deliveries: Array
+})
 
-        PlusIcon,
-        PrinterIcon,
-        MinusIcon,
-        ArrowTopRightOnSquareIcon,
-        ArrowPathIcon,
-        MagnifyingGlassIcon,
-        PencilSquareIcon,
-        TrashIcon
-    },
+// Reactive filter form
+const form = reactive({
+    end_date: props.filter.end_date,
+    start_date: props.filter.start_date
+})
 
-    props: {
-        filter: Object,
-        string_change: Object,
+// Breadcrumbs
+const breadcrumbs = [
+    { name: 'Kitchen Deliveries', href: route('kitchen_delivery.index'), current: false },
+    { name: 'List Page', href: '#', current: false }
+]
 
-        kitchen_deliveries: Array
-    },
+// Clear filter
+function clearFilter() {
+    Object.keys(form).forEach((key) => (form[key] = ''))
+}
 
-    mounted() {
-        $('#table').DataTable({
-            lengthMenu: [
-                [10, 25, 50, 100, 200],
-                [10, 25, 50, 100, 200]
-            ],
-            length: 10,
-            dom: "<'flex justify-center sm:justify-end mb-3'B><'flex flex-col sm:flex-row justify-between'lf><'block overflow-auto'rt><'flex flex-col sm:flex-row justify-between'ip>",
-            buttons: ['copy', 'excel']
-        })
-    },
+// Submit filter
+function submit() {
+    router.visit(route('kitchen_delivery.index'), {
+        data: form
+    })
+}
 
-    methods: {
-        destroy(route, message = 'Are you sure you want to delete?') {
-            if (confirm(message)) {
-                router.delete(route)
-            }
-        }
-    },
-
-    setup(props) {
-        const breadcrumbs = [
-            { name: 'Kitchen Deliveries', href: route('kitchen_delivery.index'), current: false },
-            { name: 'List Page', href: '#', current: false }
-        ]
-
-        const form = reactive({
-            end_date: props.filter.end_date,
-            start_date: props.filter.start_date
-        })
-
-        function clearFilter() {
-            for (const [key, value] of Object.entries(form)) {
-                form[key] = ''
-            }
-        }
-
-        function submit() {
-            router.visit(route('kitchen_delivery.index'), {
-                data: form
-            })
-        }
-
-        return {
-            breadcrumbs,
-            form,
-            clearFilter,
-            submit
-        }
+// Delete record
+function destroy(route, message = 'Are you sure you want to delete?') {
+    if (confirm(message)) {
+        router.delete(route)
     }
 }
+
+// Initialize DataTable on mounted
+onMounted(() => {
+    $('#table').DataTable({
+        lengthMenu: [
+            [10, 25, 50, 100, 200],
+            [10, 25, 50, 100, 200]
+        ],
+        length: 10,
+        dom: "<'flex justify-center sm:justify-end mb-3'B><'flex flex-col sm:flex-row justify-between'lf><'block overflow-auto'rt><'flex flex-col sm:flex-row justify-between'ip>",
+        buttons: ['copy', 'excel']
+    })
+})
 </script>

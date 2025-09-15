@@ -19,7 +19,7 @@ class KitchenDeliveryItem extends Model
         'avg_rate',
         'requisition_total',
         'delivery_total',
-        'item_id',
+        'product_id',
         'kitchen_delivery_id',
     ];
 
@@ -35,7 +35,7 @@ class KitchenDeliveryItem extends Model
 
     public function item()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class, 'product_id');
     }
 
     /**
@@ -43,7 +43,7 @@ class KitchenDeliveryItem extends Model
      */
     public function itemName(): Attribute
     {
-        return Attribute::get(fn () => CacheProduct::find($this->item_id)->name);
+        return Attribute::get(fn() => CacheProduct::find($this->product_id)->name);
     }
 
     /**
@@ -51,6 +51,6 @@ class KitchenDeliveryItem extends Model
      */
     public function itemUnit(): Attribute
     {
-        return Attribute::get(fn () => CacheProduct::find($this->item_id)->unit);
+        return Attribute::get(fn() => CacheProduct::find($this->product_id)->unit);
     }
 }

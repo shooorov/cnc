@@ -1,5 +1,5 @@
 <template>
-	<Head> <title> Edit Kitchen Delivery </title> </Head>
+    <Head> <title>Edit Kitchen Delivery</title> </Head>
 
     <div>
         <div class="bg-white shadow">
@@ -10,7 +10,9 @@
                     </div>
 
                     <div class="mt-6 h-9 flex space-x-3 md:mt-0 md:ml-4">
-                        <Link :href="route('kitchen_delivery.create')" class="inline-flex items-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-primary-400">
+                        <Link
+                            :href="route('kitchen_delivery.create')"
+                            class="inline-flex items-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-primary-400">
                             <PlusIcon class="-ml-1 mr-2 h-5 w-5 text-gray-400" aria-hidden="true" />
                             Create
                         </Link>
@@ -26,7 +28,9 @@
                         <p class="max-w-2xl leading-10 text-gray-700 text-lg font-medium mb-4 sm:mb-0">Kitchen Delivery Edit</p>
 
                         <div class="flex-shrink-0 flex space-x-3">
-                            <button @click="submit" class="mr-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                            <button
+                                @click="submit"
+                                class="mr-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                                 <PencilSquareIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                                 Update
                             </button>
@@ -37,18 +41,25 @@
 
                     <form @submit.prevent="submit">
                         <dl class="space-y-4 sm:space-y-6 px-5 py-6">
-
                             <div class="max-w-xl mx-auto">
                                 <div class="grid grid-cols-6 gap-6">
                                     <div class="col-span-6 sm:col-span-3">
                                         <label class="block text-sm font-medium text-gray-700"> Requisition Date <span class="text-red-500">*</span> </label>
-                                        <input v-model="form.delivery_date" type="date" class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded">
+                                        <input
+                                            v-model="form.delivery_date"
+                                            type="date"
+                                            class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
                                         <InputError :message="$page.props.errors.delivery_date" />
                                     </div>
 
                                     <div class="col-span-6 sm:col-span-3">
                                         <label class="block text-sm font-medium text-gray-700"> Total Around <span class="text-red-500">*</span> </label>
-                                        <input :value="form.total_format" type="text" placeholder="Total" readonly class="mt-1 block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded">
+                                        <input
+                                            :value="form.total_format"
+                                            type="text"
+                                            placeholder="Total"
+                                            readonly
+                                            class="mt-1 block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                         <InputError :message="$page.props.errors.total" />
                                     </div>
 
@@ -62,7 +73,11 @@
                                         <label class="block text-sm font-medium text-gray-700"> {{ string_change.product }} Requisition <span class="text-red-500">*</span> </label>
                                         <div class="flex mx-auto">
                                             <Listbox class="" v-model="form.requisition_id" :items="requisitions" />
-                                            <button v-if="form.requisition_id" @click="form.requisition_id = null" type="button" class="my-0.5 ml-1 inline-flex rounded p-1.5 text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-1">
+                                            <button
+                                                v-if="form.requisition_id"
+                                                @click="form.requisition_id = null"
+                                                type="button"
+                                                class="my-0.5 ml-1 inline-flex rounded p-1.5 text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-1">
                                                 <span class="sr-only">Dismiss</span>
                                                 <XMarkIcon class="h-5 w-5" aria-hidden="true" />
                                             </button>
@@ -73,8 +88,8 @@
                             </div>
 
                             <div class="relative">
-                                <div class="absolute inset-0 flex items-center" aria-hidden="true"> <div class="w-full border-t border-gray-300" /> </div>
-                                <div class="relative flex justify-center ml-4"> <span class="px-3 bg-white text-lg font-medium text-gray-900"> Kitchen Delivery Items </span> </div>
+                                <div class="absolute inset-0 flex items-center" aria-hidden="true"><div class="w-full border-t border-gray-300" /></div>
+                                <div class="relative flex justify-center ml-4"><span class="px-3 bg-white text-lg font-medium text-gray-900"> Kitchen Delivery Items </span></div>
                             </div>
 
                             <div class="max-w-5xl mx-auto space-y-4 sm:space-y-6">
@@ -94,31 +109,70 @@
                                     <tbody class="bg-white divide-y divide-gray-200">
                                         <tr v-for="(group_item, index) in form.group_items" v-show="group_item.show" :key="index">
                                             <td>
-                                                <input v-model="group_item.name" readonly type="text" autocomplete="off" class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded">
+                                                <input
+                                                    v-model="group_item.name"
+                                                    readonly
+                                                    type="text"
+                                                    autocomplete="off"
+                                                    class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                             </td>
 
                                             <td>
-                                                <input v-model="group_item.requisition_quantity" readonly type="text" autocomplete="off" class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded">
+                                                <input
+                                                    v-model="group_item.requisition_quantity"
+                                                    readonly
+                                                    type="text"
+                                                    autocomplete="off"
+                                                    class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                             </td>
 
                                             <td>
-                                                <input v-model="group_item.delivery_quantity" @keyup="calculation(index)" placeholder="Quantity" type="text" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');" class="block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded">
+                                                <input
+                                                    v-model="group_item.delivery_quantity"
+                                                    @keyup="calculation(index)"
+                                                    placeholder="Quantity"
+                                                    type="text"
+                                                    oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+                                                    class="block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
                                             </td>
 
                                             <td>
-                                                <input v-model="group_item.unit" readonly type="text" autocomplete="off" class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded">
+                                                <input
+                                                    v-model="group_item.unit"
+                                                    readonly
+                                                    type="text"
+                                                    autocomplete="off"
+                                                    class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                             </td>
 
                                             <td>
-                                                <input v-model="group_item.avg_rate" placeholder="Avg Rate" readonly type="text" autocomplete="off" class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded">
+                                                <input
+                                                    v-model="group_item.avg_rate"
+                                                    placeholder="Avg Rate"
+                                                    readonly
+                                                    type="text"
+                                                    autocomplete="off"
+                                                    class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                             </td>
 
                                             <td>
-                                                <input v-model="group_item.requisition_total" placeholder="Total" readonly type="text" autocomplete="off" class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded">
+                                                <input
+                                                    v-model="group_item.requisition_total"
+                                                    placeholder="Total"
+                                                    readonly
+                                                    type="text"
+                                                    autocomplete="off"
+                                                    class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                             </td>
 
                                             <td>
-                                                <input v-model="group_item.delivery_total" placeholder="Total" readonly type="text" autocomplete="off" class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded">
+                                                <input
+                                                    v-model="group_item.delivery_total"
+                                                    placeholder="Total"
+                                                    readonly
+                                                    type="text"
+                                                    autocomplete="off"
+                                                    class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                             </td>
                                         </tr>
                                     </tbody>
@@ -133,13 +187,15 @@
                             </div>
 
                             <div class="relative">
-                                <div class="absolute inset-0 flex items-center" aria-hidden="true"> <div class="w-full border-t border-gray-300" /> </div>
-                                <div class="relative flex justify-center ml-4"> <span class="px-3 bg-white text-lg font-medium text-gray-900"> </span> </div>
+                                <div class="absolute inset-0 flex items-center" aria-hidden="true"><div class="w-full border-t border-gray-300" /></div>
+                                <div class="relative flex justify-center ml-4"><span class="px-3 bg-white text-lg font-medium text-gray-900"> </span></div>
                             </div>
 
                             <div class="max-w-5xl mx-auto space-y-4 sm:space-y-6">
                                 <div class="flex justify-start">
-                                    <button type="submit" class="mr-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                    <button
+                                        type="submit"
+                                        class="mr-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                                         <PencilSquareIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                                         Update
                                     </button>
@@ -154,25 +210,19 @@
 </template>
 
 <script>
-import { reactive } from 'vue';
-import { router, Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3'
+import { reactive } from 'vue'
 
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Breadcrumb from '@/Components/Breadcrumb.vue';
-import Alert from '@/Components/Alert.vue';
-import Combobox from '@/Components/Combobox.vue';
-import InputError from '@/Components/InputError.vue';
-import Listbox from '@/Components/Listbox.vue';
+import Alert from '@/Components/Alert.vue'
+import Breadcrumb from '@/Components/Breadcrumb.vue'
+import Combobox from '@/Components/Combobox.vue'
+import InputError from '@/Components/InputError.vue'
+import Listbox from '@/Components/Listbox.vue'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
-import {
-    PlusIcon,
-    MinusIcon,
-    XMarkIcon,
-} from '@heroicons/vue/24/solid';
+import { MinusIcon, PlusIcon, XMarkIcon } from '@heroicons/vue/24/solid'
 
-import {
-    PencilSquareIcon,
-} from '@heroicons/vue/24/outline';
+import { PencilSquareIcon } from '@heroicons/vue/24/outline'
 
 export default {
     layout: AuthenticatedLayout,
@@ -184,11 +234,11 @@ export default {
         Head,
         InputError,
         Link,
-		Listbox,
+        Listbox,
         PlusIcon,
         MinusIcon,
         PencilSquareIcon,
-        XMarkIcon,
+        XMarkIcon
     },
 
     props: {
@@ -196,67 +246,66 @@ export default {
         date: String,
         kitchen_delivery: Object,
         items: Array,
-		delivery_items: Array,
-		requisitions: Array,
-		central_kitchens: Array,
+        delivery_items: Array,
+        requisitions: Array,
+        central_kitchens: Array
     },
 
     methods: {
-        calculation(index){
-            let this_item = this.form.group_items[index];
+        calculation(index) {
+            let this_item = this.form.group_items[index]
 
-            this_item.requisition_total = Number(((this_item.avg_rate || 0) * (this_item.requisition_quantity || 0)).toFixed(3));
-            this_item.delivery_total = Number(((this_item.avg_rate || 0) * (this_item.delivery_quantity || 0)).toFixed(3));
+            this_item.requisition_total = Number(((this_item.avg_rate || 0) * (this_item.requisition_quantity || 0)).toFixed(3))
+            this_item.delivery_total = Number(((this_item.avg_rate || 0) * (this_item.delivery_quantity || 0)).toFixed(3))
 
-            this.form.total = this.form.group_items.reduce((carry, val) => carry + Number(val.delivery_total || 0), 0);
-            this.form.total_format = this.form.total.toLocaleString('en-US');
-            this.form.requisition_total = this.form.group_items.reduce((carry, val) => carry + Number(val.requisition_total || 0), 0).toLocaleString('en-US');
-        },
+            this.form.total = this.form.group_items.reduce((carry, val) => carry + Number(val.delivery_total || 0), 0)
+            this.form.total_format = this.form.total.toLocaleString('en-US')
+            this.form.requisition_total = this.form.group_items.reduce((carry, val) => carry + Number(val.requisition_total || 0), 0).toLocaleString('en-US')
+        }
     },
 
     mounted() {
-        this.form.total_format = Number(this.form.total).toLocaleString('en-US');
+        this.form.total_format = Number(this.form.total).toLocaleString('en-US')
     },
 
-	watch: {
+    watch: {
         'form.requisition_id'(newVal, oldVal) {
-			console.log(newVal, this.items);
-            this.form.group_items.map(item => {
-
-                let requisition = this.requisitions.find(i => i.id == this.form.requisition_id);
-                requisition?.items?.forEach(i => {
-                    if(i.item_id == item.id){
-                        item.requisition_quantity = i.quantity;
-                        item.delivery_quantity = null;
-                        item.requisition_total = null;
-                        item.delivery_total = null;
+            console.log(newVal, this.items)
+            this.form.group_items.map((item) => {
+                let requisition = this.requisitions.find((i) => i.id == this.form.requisition_id)
+                requisition?.items?.forEach((i) => {
+                    if (i.item_id == item.id) {
+                        item.requisition_quantity = i.quantity
+                        item.delivery_quantity = null
+                        item.requisition_total = null
+                        item.delivery_total = null
                     }
-                });
+                })
 
-                item.show = true;
-                return item;
-            });
+                item.show = true
+                return item
+            })
         }
-	},
+    },
 
     setup(props) {
         const breadcrumbs = [
             { name: 'Kitchen Deliveries', href: route('kitchen_delivery.index'), current: false },
-            { name: 'Edit Page', href: '#', current: false },
+            { name: 'Edit Page', href: '#', current: false }
         ]
 
         const form = reactive({
             delivery_date: props.kitchen_delivery.date,
             branch_id: props.kitchen_delivery.branch_id,
-			requisition_id: props.kitchen_delivery.requisition_id,
-			central_kitchen_id: props.kitchen_delivery.central_kitchen_id,
+            requisition_id: props.kitchen_delivery.requisition_id,
+            central_kitchen_id: props.kitchen_delivery.central_kitchen_id,
 
             total: props.kitchen_delivery.total,
-            group_items: props.kitchen_delivery.items.map(item => {
-				// item.quantity = '';
-				item.show = true;
-				return item;
-			}),
+            group_items: props.kitchen_delivery.items.map((item) => {
+                // item.quantity = '';
+                item.show = true
+                return item
+            })
         })
 
         function submit() {

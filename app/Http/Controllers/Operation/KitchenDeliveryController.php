@@ -146,7 +146,8 @@ class KitchenDeliveryController extends Controller
      */
     public function show(KitchenDelivery $kitchen_delivery)
     {
-        $kitchen_delivery->items;
+        $kitchen_delivery->load('items', 'branch');
+        // dd($kitchen_delivery->items);
         $kitchen_delivery->date_format = $kitchen_delivery->date->format('d/m/Y');
         $kitchen_delivery->branch_name = $kitchen_delivery->branch->name;
         $kitchen_delivery->name = $kitchen_delivery->name . ' - ' . $kitchen_delivery->date_format;
@@ -171,6 +172,8 @@ class KitchenDeliveryController extends Controller
             $requisition->items = $requisition->items;
         }
 
+        $kitchen_delivery->load('items');
+        // dd($kitchen_delivery);
         $params = [
             'requisitions' => $requisitions,
             'central_kitchens' => CacheCentralKitchen::get(),

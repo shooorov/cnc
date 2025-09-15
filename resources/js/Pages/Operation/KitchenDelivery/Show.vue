@@ -1,89 +1,78 @@
 <template>
     <Head title="Kitchen Delivery Details" />
 
-    <div>
-        <div class="bg-white shadow">
-            <div class="px-4 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
-                <div class="py-6 md:flex md:items-center md:justify-between lg:border-t lg:border-gray-200">
-                    <div class="flex-1 min-w-0">
-                        <Breadcrumb :breadcrumbs="breadcrumbs" />
-                    </div>
-                    <div class="mt-6 h-9 flex space-x-3 md:mt-0 md:ml-4"></div>
+    <div class="bg-white shadow">
+        <div class="px-4 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
+            <div class="py-6 md:flex md:items-center md:justify-between lg:border-t lg:border-gray-200">
+                <div class="flex-1 min-w-0">
+                    <Breadcrumb :breadcrumbs="breadcrumbs" />
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="py-5">
-            <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white shadow sm:rounded-lg overflow-hidden">
-                    <div class="bg-white px-4 py-5 border-b border-gray-200 sm:px-6">
-                        <div class="-ml-4 -mt-4 flex justify-between items-center flex-wrap sm:flex-nowrap">
-                            <div class="ml-4 mt-4">
-                                <div class="flex items-center">
-                                    <div class="ml-4">
-                                        <h3 class="text-lg leading-6 font-medium text-gray-900">{{ kitchen_delivery.date }}</h3>
-                                        <p class="mt-1 max-w-2xl text-sm text-gray-500">Kitchen Delivery details and {{ string_change.product }} information.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="ml-4 mt-4 shrink-0 flex">
-                                <a
-                                    target="_blank"
-                                    :href="route('report.kitchen_delivery', kitchen_delivery.id)"
-                                    class="inline-flex items-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-offset-gray-100 focus:ring-primary-400">
-                                    <PrinterIcon class="-ml-1 mr-2 h-5 w-5 text-gray-400" aria-hidden="true" />
-                                    Print
-                                </a>
-                            </div>
+    <div class="py-5">
+        <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white shadow sm:rounded-lg overflow-hidden">
+                <!-- Header -->
+                <div class="bg-white px-4 py-5 border-b border-gray-200 sm:px-6 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">{{ kitchen_delivery.branch.name + ' - '+ formatDateDMY(kitchen_delivery.date) }}</h3>
+                        <p class="mt-1 max-w-2xl text-sm text-gray-500">Kitchen Delivery details and {{ string_change.product }} information.</p>
+                    </div>
+
+                    <a
+                        target="_blank"
+                        :href="route('report.kitchen_delivery', kitchen_delivery.id)"
+                        class="inline-flex items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-primary-400">
+                        <PrinterIcon class="-ml-1 mr-2 h-5 w-5 text-gray-400" aria-hidden="true" />
+                        Print
+                    </a>
+                </div>
+
+                <Alert />
+
+                <!-- Totals -->
+                <div class="border-t border-gray-200">
+                    <dl>
+                        <div class="bg-white md:px-8 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Total</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                {{ kitchen_delivery.total }}
+                            </dd>
+                        </div>
+                    </dl>
+
+                    <!-- Items Header -->
+                    <div class="relative my-6">
+                        <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                            <div class="w-full border-t border-gray-300" />
+                        </div>
+                        <div class="relative flex justify-center ml-4">
+                            <span class="px-3 bg-white text-lg font-medium text-gray-900">{{ string_change.product_s }}</span>
                         </div>
                     </div>
 
-                    <Alert />
-
-                    <div class="border-t border-gray-200">
-                        <dl>
-                            <div class="bg-white md:px-8 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt class="text-sm font-medium text-gray-500">Total</dt>
-                                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                                    {{ kitchen_delivery.total }}
-                                </dd>
-                            </div>
-                        </dl>
-
-                        <div class="relative">
-                            <div class="absolute inset-0 flex items-center" aria-hidden="true"><div class="w-full border-t border-gray-300" /></div>
-                            <div class="relative flex justify-center ml-4">
-                                <span class="px-3 bg-white text-lg font-medium text-gray-900"> {{ string_change.product_s }} </span>
-                            </div>
-                        </div>
-
-                        <dl class="my-8">
-                            <div class="sm:col-span-2">
-                                <dd class="text-sm text-gray-900">
-                                    <table class="border-collapse table-fixed w-full text-sm">
-                                        <thead>
-                                            <tr>
-                                                <th scope="col" class="w-80 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">
-                                                    {{ string_change.product }}
-                                                </th>
-                                                <th scope="col" class="w-56 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Quantity</th>
-                                                <th scope="col" class="w-40 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Avg Rate</th>
-                                                <th scope="col" class="w-40 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Total</th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody class="bg-white divide-y divide-gray-200">
-                                            <tr v-for="(group_item, index) in kitchen_delivery.items" :key="index" :class="[index % 2 == 0 ? 'bg-white' : 'bg-primary-50']">
-                                                <td class="px-8 py-3 text-sm leading-5 text-gray-700">{{ group_item.item_name }}</td>
-                                                <td class="px-8 py-3 text-sm leading-5 text-gray-700">{{ group_item.delivery_quantity }} {{ group_item.unit }}</td>
-                                                <td class="px-8 py-3 text-sm leading-5 text-gray-700">{{ group_item.avg_rate }}</td>
-                                                <td class="px-8 py-3 text-sm leading-5 text-gray-700">{{ group_item.delivery_total }}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </dd>
-                            </div>
-                        </dl>
+                    <!-- Items Table -->
+                    <div class="max-w-5xl mx-auto">
+                        <table class="border-collapse table-fixed w-full text-sm">
+                            <thead>
+                                <tr>
+                                    <th class="w-80 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">{{ string_change.product }}</th>
+                                    <th class="w-56 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Quantity</th>
+                                    <th class="w-40 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Avg Rate</th>
+                                    <th class="w-40 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in kitchen_delivery.items" :key="index" :class="[index % 2 === 0 ? 'bg-white' : 'bg-primary-50']">
+                                    <td class="px-8 py-3 text-sm text-gray-700">{{ item.item_name }}</td>
+                                    <td class="px-8 py-3 text-sm text-gray-700">{{ item.delivery_quantity }} {{ item.unit }}</td>
+                                    <td class="px-8 py-3 text-sm text-gray-700">{{ item.avg_rate }}</td>
+                                    <td class="px-8 py-3 text-sm text-gray-700">{{ item.delivery_total }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -91,51 +80,32 @@
     </div>
 </template>
 
-<script>
-import { Head, Link } from '@inertiajs/vue3'
-
+<script setup>
 import Alert from '@/Components/Alert.vue'
 import Breadcrumb from '@/Components/Breadcrumb.vue'
-import StatusOptions from '@/Components/StatusOptions.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { PrinterIcon } from '@heroicons/vue/24/solid'
+import { Head } from '@inertiajs/vue3'
 
-import { ChevronDownIcon, EnvelopeIcon, PencilSquareIcon, PhoneIcon, PlusIcon, PrinterIcon, TrashIcon } from '@heroicons/vue/24/solid'
+defineOptions({ layout: AuthenticatedLayout })
 
-export default {
-    layout: AuthenticatedLayout,
+const props = defineProps({
+    string_change: Object,
+    kitchen_delivery: Object
+})
 
-    components: {
-        Alert,
-        Breadcrumb,
-        Head,
-        Link,
-        StatusOptions,
+const breadcrumbs = [
+    { name: 'Kitchen Deliveries', href: route('kitchen_delivery.index'), current: false },
+    { name: 'Detail Page', href: '#', current: true }
+]
 
-        PrinterIcon,
-        ChevronDownIcon,
-        EnvelopeIcon,
-        PencilSquareIcon,
-        PhoneIcon,
-        PlusIcon,
-        TrashIcon
-    },
-
-    props: {
-        auth: Object,
-        string_change: Object,
-
-        kitchen_delivery: Object
-    },
-
-    setup(props) {
-        const breadcrumbs = [
-            { name: 'Kitchen Deliveries', href: route('kitchen_delivery.index'), current: false },
-            { name: 'Detail Page', href: '#', current: false }
-        ]
-
-        return {
-            breadcrumbs
-        }
-    }
+// Format date to d/m/Y
+function formatDateDMY(dateString) {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
 }
 </script>
