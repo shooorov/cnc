@@ -72,7 +72,7 @@
                                     <div class="col-span-6 sm:col-span-3">
                                         <label class="block text-sm font-medium text-gray-700"> {{ string_change.product }} Requisition <span class="text-red-500">*</span> </label>
                                         <div class="flex mx-auto">
-                                            <Listbox class="" v-model="form.requisition_id" :items="requisitions" />
+                                            <Listbox class="mt-1" v-model="form.requisition_id" :items="requisitions" />
                                             <button
                                                 v-if="form.requisition_id"
                                                 @click="form.requisition_id = null"
