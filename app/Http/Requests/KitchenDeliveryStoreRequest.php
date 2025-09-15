@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class KitchenDeliveryRequest extends FormRequest
+class KitchenDeliveryStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -20,6 +20,7 @@ class KitchenDeliveryRequest extends FormRequest
             'total' => ['required', 'numeric'],
 
             'group_items.*.product_id' => ['required', 'exists:products,id'],
+            'group_items.*.requisition_quantity' => ['required', 'numeric'],
             'group_items.*.delivery_quantity' => ['nullable', 'numeric'],
             'group_items.*.rate' => [
                 'nullable',

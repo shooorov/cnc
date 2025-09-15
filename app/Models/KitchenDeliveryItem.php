@@ -13,8 +13,8 @@ class KitchenDeliveryItem extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'requisition_quantity',
         'delivery_quantity',
+        'requisition_quantity',
         'rate',
         'avg_rate',
         'total',

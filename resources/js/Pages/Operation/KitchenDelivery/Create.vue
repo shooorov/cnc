@@ -31,7 +31,6 @@ const form = useForm({
     group_items: props.items.map((item) => ({
         ...item,
         show: true,
-        unit: 'pcs',
         avg_rate: item.rate
     }))
 })
@@ -58,7 +57,6 @@ watch(
                 delivery_quantity: 0,
                 rate: i.rate || 0,
                 avg_rate: i.avg_rate || 0,
-                unit: 'pcs',
                 show: true,
                 average_total: Number(((i.avg_rate || 0) * (i.quantity || 0)).toFixed(3)),
                 delivery_total: Number(((i.rate || 0) * (i.quantity || 0)).toFixed(3)),
@@ -197,9 +195,8 @@ const breadcrumbs = [
                                             Req. Qty
                                         </th>
                                         <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Delivery Quantity">
-                                            Delivery Qty
+                                            Del Qty in pc
                                         </th>
-                                        <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
                                         <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Rate</th>
                                         <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Average Total">
                                             Avg. Total
@@ -237,15 +234,6 @@ const breadcrumbs = [
                                                 type="text"
                                                 oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
                                                 class="block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
-                                        </td>
-
-                                        <td>
-                                            <input
-                                                v-model="group_item.unit"
-                                                readonly
-                                                type="text"
-                                                autocomplete="off"
-                                                class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                         </td>
 
                                         <td>
@@ -293,7 +281,7 @@ const breadcrumbs = [
 
                                 <tfoot class="bg-white">
                                     <tr>
-                                        <th colspan="7" scope="col" class="py-2 text-right text-lg font-medium font-mono">Total Around</th>
+                                        <th colspan="6" scope="col" class="py-2 text-right text-lg font-medium font-mono">Total Around</th>
                                         <th colspan="1" scope="col" class="py-2 text-center text-lg font-medium font-mono">{{ form.total_format }}</th>
                                     </tr>
                                 </tfoot>

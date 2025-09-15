@@ -9,6 +9,18 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class KitchenDelivery extends Model
 {
     use SoftDeletes;
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'date',
+        'total',
+        'branch_id',
+        'central_kitchen_id',
+        'product_requisition_id',
+    ];
 
     /**
      * The attributes that should be cast.
@@ -16,7 +28,7 @@ class KitchenDelivery extends Model
      * @var array
      */
     protected $casts = [
-        'date' => 'date',
+        'date' => 'datetime:Y-m-d H:i',
     ];
 
     /**

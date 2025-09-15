@@ -69,7 +69,7 @@
                                         <InputError :message="$page.props.errors.central_kitchen_id" />
                                     </div>
 
-                                    <div class="col-span-6 sm:col-span-6">
+                                    <div class="col-span-6 sm:col-span-3">
                                         <label class="block text-sm font-medium text-gray-700"> {{ string_change.product }} Requisition <span class="text-red-500">*</span> </label>
                                         <div class="flex mx-auto">
                                             <Listbox class="" v-model="form.requisition_id" :items="requisitions" />
@@ -96,18 +96,23 @@
                                 <table class="table-auto sm:table-fixed min-w-full divide-y divide-gray-200">
                                     <thead class="bg-gray-50">
                                         <tr>
-                                            <th scope="col" class="py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ string_change.product }}</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Requisition Quantity">
+                                            <th scope="col" class="py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{{ string_change.product }}</th>
+                                            <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Requisition Quantity">
                                                 Req. Qty
                                             </th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Qty</th>
-                                            <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Avg. Rate">Avg. Rate</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Avg. Total">
+                                            <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Delivery Quantity">
+                                                Del Qty in pc
+                                            </th>
+                                            <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Average Rate">
+                                                Avg. Rate
+                                            </th>
+                                            <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Average Total">
                                                 Avg. Total
                                             </th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Total</th>
+                                            <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
+                                            <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Delivery Total">
+                                                Del Total
+                                            </th>
                                         </tr>
                                     </thead>
 
@@ -143,15 +148,6 @@
 
                                             <td>
                                                 <input
-                                                    v-model="group_item.unit"
-                                                    readonly
-                                                    type="text"
-                                                    autocomplete="off"
-                                                    class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
-                                            </td>
-
-                                            <td>
-                                                <input
                                                     v-model="group_item.avg_rate"
                                                     placeholder="Avg Rate"
                                                     readonly
@@ -162,7 +158,7 @@
 
                                             <td>
                                                 <input
-                                                    v-model="group_item.average_total"
+                                                    :value="group_item.average_total_format"
                                                     placeholder="Total"
                                                     readonly
                                                     type="text"
@@ -173,6 +169,7 @@
                                             <td>
                                                 <input
                                                     v-model="group_item.rate"
+                                                    @keyup="calculation(index)"
                                                     placeholder="Avg Rate"
                                                     type="text"
                                                     autocomplete="off"
@@ -182,7 +179,7 @@
 
                                             <td>
                                                 <input
-                                                    v-model="group_item.delivery_total"
+                                                    :value="group_item.delivery_total_format"
                                                     placeholder="Total"
                                                     readonly
                                                     type="text"
@@ -258,7 +255,6 @@ const breadcrumbs = [
 // Reactive form
 const form = reactive({
     delivery_date: props.kitchen_delivery.date_format,
-    branch_id: props.kitchen_delivery.branch_id,
     requisition_id: props.kitchen_delivery.product_requisition_id,
     central_kitchen_id: props.kitchen_delivery.central_kitchen_id,
     total: props.kitchen_delivery.total, // raw number for calculations
@@ -305,7 +301,6 @@ watch(
             const requisitionItem = selectedRequisition.items.find((i) => i.product_id === item.product_id)
             return {
                 ...item,
-                unit: 'pcs',
                 delivery_quantity: requisitionItem ? requisitionItem.delivery_quantity : 0,
                 requisition_quantity: requisitionItem ? requisitionItem.requisition_quantity : 0,
                 avg_rate: item.avg_rate,

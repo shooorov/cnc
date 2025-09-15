@@ -8,12 +8,14 @@ use App\Http\Cache\CacheKitchenDeliveryItem;
 use App\Http\Cache\CacheProduct;
 use App\Http\Cache\CacheProductRequisition;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\KitchenDeliveryRequest;
+use App\Http\Requests\KitchenDeliveryStoreRequest;
+use App\Http\Requests\KitchenDeliveryUpdateRequest;
 use App\Models\KitchenDelivery;
 use App\Models\KitchenDeliveryItem;
 use App\Models\Product;
 use App\Models\ProductRequisition;
 use App\RolePermission;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -96,15 +98,15 @@ class KitchenDeliveryController extends Controller
      *
      * @return Response
      */
-    public function store(KitchenDeliveryRequest $request)
+    public function store(KitchenDeliveryStoreRequest $request)
     {
-        dd($request->all());
+        // dd($request->all());
         DB::beginTransaction();
 
         $data = $request->validated();
 
         $kitchen_delivery = new KitchenDelivery;
-        $kitchen_delivery->date = now()->parse($data['delivery_date']); // <-- safe
+        $kitchen_delivery->date = Carbon::parse($data['delivery_date']); // <-- safe
         $kitchen_delivery->total = $data['total'];
         $kitchen_delivery->branch_id = ProductRequisition::find($data['requisition_id'])->branch_id;
         $kitchen_delivery->product_requisition_id = $data['requisition_id'];
@@ -193,64 +195,67 @@ class KitchenDeliveryController extends Controller
      *
      * @return Response
      */
-    public function update(Request $request, KitchenDelivery $kitchen_delivery)
+    public function update(KitchenDeliveryUpdateRequest $request, KitchenDelivery $kitchen_delivery)
     {
-        $request->validate([
-            'delivery_date' => ['required', 'date'],
-            'branch_id' => ['required', 'exists:branches,id'],
-            'requisition_id' => ['required', 'exists:product_requisitions,id'],
-            'central_kitchen_id' => ['required', 'exists:central_kitchens,id'],
-            'total' => ['nullable', 'numeric'],
-
-            'group_items.*.id' => ['nullable', 'exists:kitchen_delivery_id,id'],
-            'group_items.*.product_id' => ['nullable', 'exists:products,id'],
-            'group_items.*.requisition_quantity' => ['nullable', 'numeric'],
-            'group_items.*.delivery_quantity' => ['nullable', 'numeric'],
-            'group_items.*.avg_rate' => ['nullable', 'numeric'],
-            'group_items.*.delivery_total' => ['nullable', 'numeric'],
-        ]);
+        // dd($request->all());
+        $data = $request->validated();
 
         DB::beginTransaction();
-        $kitchen_delivery->date = now()->parse($request->delivery_date);
-        $kitchen_delivery->total = $request->total;
-        $kitchen_delivery->save();
 
-        $previous_items = $kitchen_delivery->items->pluck('id')->toArray();
-        foreach ($request->group_items ?? [] as $item) {
-            $product_id = array_key_exists('product_id', $item) ? $item['product_id'] : null;
-            $delivery_quantity = array_key_exists('delivery_quantity', $item) ? $item['delivery_quantity'] : null;
-            $requisition_quantity = array_key_exists('requisition_quantity', $item) ? $item['requisition_quantity'] : null;
+        // Update kitchen delivery main info
+        $kitchen_delivery->update([
+            'date' => Carbon::parse($data['delivery_date']),
+            'total' => $data['total'],
+        ]);
 
-            $rate = array_key_exists('rate', $item) ? $item['rate'] : null;
-            $avg_rate = array_key_exists('avg_rate', $item) ? $item['avg_rate'] : null;
-            $total = array_key_exists('delivery_total', $item) ? $item['delivery_total'] : null;
+        // Keep track of existing item IDs
+        $existingItemIds = $kitchen_delivery->items->pluck('id')->toArray();
 
-            if ($delivery_quantity > 0) {
-                $id = array_key_exists('delivery_item_id', $item) ? $item['delivery_item_id'] : null;
-                if (($key = array_search($id, $previous_items)) !== false) {
-                    unset($previous_items[$key]);
+        foreach ($data['group_items'] ?? [] as $item) {
+            $itemId = $item['id'] ?? null;
+            $productId = $item['product_id'] ?? null;
+
+            // Only proceed if product_id exists
+            if ($productId) {
+                // If delivery_quantity is more than 0, update or create
+                KitchenDeliveryItem::updateOrCreate(
+                    ['id' => $itemId, 'kitchen_delivery_id' => $kitchen_delivery->id],
+                    [
+                        'product_id' => $productId,
+                        'delivery_quantity' => $item['delivery_quantity'] ?? 0,
+                        'requisition_quantity' => $item['requisition_quantity'] ?? 0,
+                        'rate' => $item['rate'] ?? 0,
+                        'avg_rate' => $item['avg_rate'] ?? 0,
+                        'total' => $item['delivery_total'] ?? 0,
+                    ]
+                );
+
+                // Remove this ID from existing items to keep track of deletions
+                if ($itemId) {
+                    $key = array_search($itemId, $existingItemIds);
+                    if ($key !== false) {
+                        unset($existingItemIds[$key]);
+                    }
                 }
-
-                KitchenDeliveryItem::updateOrCreate([
-                    'id' => $item['id'],
-                    'product_id' => $product_id,
-                    'kitchen_delivery_id' => $kitchen_delivery->id,
-                ], [
-                    'delivery_quantity' => $delivery_quantity,
-                    'requisition_quantity' => $requisition_quantity,
-                    'rate' => $rate,
-                    'avg_rate' => $avg_rate,
-                    'total' => $total,
-                ]);
             }
         }
-        KitchenDeliveryItem::where('kitchen_delivery_id', $kitchen_delivery->id)->whereIn('id', $previous_items)->delete();
+
+        // Delete items that were removed from the form
+        if (!empty($existingItemIds)) {
+            KitchenDeliveryItem::where('kitchen_delivery_id', $kitchen_delivery->id)
+                ->whereIn('id', $existingItemIds)
+                ->delete();
+        }
 
         DB::commit();
+
+        // Clear cache
         CacheKitchenDelivery::forget();
         CacheKitchenDeliveryItem::forget();
 
-        return back()->with('success', __('Requisition modified successfully!'));
+        return redirect()
+            ->route('kitchen_delivery.index')
+            ->with('success', __('Requisition updated successfully!'));
     }
 
     /**
