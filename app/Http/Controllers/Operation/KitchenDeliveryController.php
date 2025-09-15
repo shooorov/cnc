@@ -8,8 +8,10 @@ use App\Http\Cache\CacheKitchenDeliveryItem;
 use App\Http\Cache\CacheProduct;
 use App\Http\Cache\CacheProductRequisition;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\KitchenDeliveryRequest;
 use App\Models\KitchenDelivery;
 use App\Models\KitchenDeliveryItem;
+use App\Models\ProductRequisition;
 use App\RolePermission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +49,11 @@ class KitchenDeliveryController extends Controller
         $kitchen_deliveries = CacheKitchenDelivery::get()
             ->where('date', '>=', $start_date)
             ->where('date', '<=', $end_date);
+        foreach ($kitchen_deliveries as $item) {
+            $item->date_format = $item->date->format('d/m/Y');
+            $item->branch_name = $item->branch->name;
+            $item->name = $item->name . ' - ' . $item->date_format;
+        }
 
         $params = [
             'kitchen_deliveries' => $kitchen_deliveries,
@@ -88,46 +95,44 @@ class KitchenDeliveryController extends Controller
      *
      * @return Response
      */
-    public function store(Request $request)
+    public function store(KitchenDeliveryRequest $request)
     {
-        $request->validate([
-            'delivery_date' => ['required', 'date'],
-            'branch_id' => ['required', 'exists:branches,id'],
-            'requisition_id' => ['required', 'exists:product_requisitions,id'],
-            'central_kitchen_id' => ['required', 'exists:central_kitchens,id'],
-            'total' => ['required', 'numeric'],
-
-            'group_items.*.id' => ['required', 'exists:products,id'],
-            'group_items.*.delivery_quantity' => ['nullable', 'numeric'],
-            'group_items.*.avg_rate' => ['nullable', 'numeric'],
-            'group_items.*.delivery_total' => ['nullable', 'numeric'],
-        ]);
-
+        // dd($request->all());
         DB::beginTransaction();
 
+        $data = $request->validated();
+
         $kitchen_delivery = new KitchenDelivery;
-        $kitchen_delivery->date = now()->parse($request->delivery_date);
-        $kitchen_delivery->total = $request->total;
-        $kitchen_delivery->branch_id = $request->branch_id;
-        $kitchen_delivery->requisition_id = $request->requisition_id;
-        $kitchen_delivery->central_kitchen_id = $request->central_kitchen_id;
+        $kitchen_delivery->date = now()->parse($data['delivery_date']); // <-- safe
+        $kitchen_delivery->total = $data['total'];
+        $kitchen_delivery->branch_id = ProductRequisition::find($data['requisition_id'])->branch_id;
+        $kitchen_delivery->product_requisition_id = $data['requisition_id'];
+        $kitchen_delivery->central_kitchen_id = $data['central_kitchen_id'];
         $kitchen_delivery->save();
 
-        foreach ($request->group_items ?? [] as $item) {
-            $delivery_quantity = array_key_exists('delivery_quantity', $item) ? $item['delivery_quantity'] : null;
-            if ($delivery_quantity > 0) {
+        foreach ($data['group_items'] ?? [] as $item) {
+            $item_id = $item['product_id'] ?? null;
+            $rate = $item['rate'] ?? null;
+            $avg_rate = $item['avg_rate'] ?? null;
+            $total = $item['delivery_total'] ?? null;
+            $delivery_quantity = $item['delivery_quantity'] ?? null;
+            $requisition_quantity = $item['requisition_quantity'] ?? null;
+
+            if ($delivery_quantity > 0 && $item_id) {
                 KitchenDeliveryItem::create([
-                    'delivery_quantity' => $item['delivery_quantity'],
-                    'requisition_quantity' => $item['requisition_quantity'],
-                    'avg_rate' => $item['avg_rate'],
-                    'total' => $item['delivery_total'],
-                    'item_id' => $item['id'],
+                    'delivery_quantity' => $delivery_quantity,
+                    'requisition_quantity' => $requisition_quantity,
+                    'rate' => $rate,
+                    'avg_rate' => $avg_rate,
+                    'total' => $total,
+                    'product_id' => $item_id,
                     'kitchen_delivery_id' => $kitchen_delivery->id,
                 ]);
             }
         }
 
         DB::commit();
+
         CacheKitchenDelivery::forget();
         CacheKitchenDeliveryItem::forget();
 
@@ -142,6 +147,10 @@ class KitchenDeliveryController extends Controller
     public function show(KitchenDelivery $kitchen_delivery)
     {
         $kitchen_delivery->items;
+        $kitchen_delivery->date_format = $kitchen_delivery->date->format('d/m/Y');
+        $kitchen_delivery->branch_name = $kitchen_delivery->branch->name;
+        $kitchen_delivery->name = $kitchen_delivery->name . ' - ' . $kitchen_delivery->date_format;
+
         $params = [
             'kitchen_delivery' => $kitchen_delivery,
         ];
@@ -163,7 +172,6 @@ class KitchenDeliveryController extends Controller
         }
 
         $params = [
-            'date' => now()->format('Y-m-d'),
             'requisitions' => $requisitions,
             'central_kitchens' => CacheCentralKitchen::get(),
             'kitchen_delivery' => $kitchen_delivery,

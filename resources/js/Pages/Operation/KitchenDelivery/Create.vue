@@ -23,7 +23,6 @@ const props = defineProps({
 })
 
 const form = useForm({
-    branch_id: null,
     requisition_id: null,
     central_kitchen_id: null,
     delivery_date: props.date,
@@ -40,43 +39,48 @@ const submit = () => {
     page.props.alertMessage = {}
     form.post(route('kitchen_delivery.store'))
 }
-
 watch(
     () => form.requisition_id,
     (newVal) => {
-        console.log('Selected requisition:', newVal)
+        if (!newVal) {
+            form.group_items = []
+            return
+        }
 
-        form.group_items = props.items.map((item) => {
-            let requisition_quantity = null
+        const selectedItems = props.requisition_items[newVal] || []
 
-            props.requisition_items[newVal]?.forEach((i) => {
-                if (i.item_id === item.id) {
-                    requisition_quantity = i.quantity
-                }
-            })
-
+        form.group_items = selectedItems.map((i) => {
             return {
-                ...item,
-                requisition_quantity, // ✅ carry forward into new object
-                show: true,
+                item_id: i.product_id,
+                name: props.items.find(p => p.id == i.product_id)?.name, // product name
+                requisition_quantity: i.quantity,
+                delivery_quantity: 0,
+                rate: i.rate || 0,
+                avg_rate: i.avg_rate || 0,
                 unit: 'pcs',
-                avg_rate: item.rate
+                show: true,
+                average_total: Number(((i.avg_rate || 0) * (i.quantity || 0)).toFixed(3)),
+                delivery_total: Number(((i.rate || 0) * (i.quantity || 0)).toFixed(3)),
             }
         })
+
+        form.total = form.group_items.reduce((carry, val) => carry + val.delivery_total, 0)
+        form.average_total = form.group_items.reduce((carry, val) => carry + val.average_total, 0)
+        form.total_format = form.total.toLocaleString('en-US')
     }
 )
 
 const calculation = (index) => {
     let this_item = form.group_items[index]
 
-    this_item.requisition_total = Number(((this_item.avg_rate || 0) * (this_item.requisition_quantity || 0)).toFixed(3))
+    this_item.average_total = Number(((this_item.avg_rate || 0) * (this_item.delivery_quantity || 0)).toFixed(3))
 
-    this_item.delivery_total = Number(((this_item.avg_rate || 0) * (this_item.delivery_quantity || 0)).toFixed(3))
+    this_item.delivery_total = Number(((this_item.rate || 0) * (this_item.delivery_quantity || 0)).toFixed(3))
 
     form.total = form.group_items.reduce((carry, val) => carry + Number(val.delivery_total || 0), 0)
     form.total_format = form.total.toLocaleString('en-US')
 
-    form.requisition_total = form.group_items.reduce((carry, val) => carry + Number(val.requisition_total || 0), 0).toLocaleString('en-US')
+    form.average_total = form.group_items.reduce((carry, val) => carry + Number(val.average_total || 0), 0).toLocaleString('en-US')
 }
 
 const breadcrumbs = [
@@ -189,11 +193,18 @@ const breadcrumbs = [
                                             <th scope="col" class="py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 {{ string_change.product }}
                                             </th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requisition Quantity</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Quantity</th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Requisition Quantity">
+                                                Req. Qty
+                                            </th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Delivery Quantity">
+                                                Delivery Qty
+                                            </th>
                                             <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
                                             <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Rate</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requisition Total</th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Average Total">
+                                                Avg. Total
+                                            </th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
                                             <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Total</th>
                                         </tr>
                                     </thead>
@@ -249,12 +260,23 @@ const breadcrumbs = [
 
                                             <td>
                                                 <input
-                                                    v-model="group_item.requisition_total"
+                                                    v-model="group_item.average_total"
                                                     placeholder="Total"
                                                     readonly
                                                     type="text"
                                                     autocomplete="off"
                                                     class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
+                                            </td>
+
+                                            <td>
+                                                <input
+                                                    v-model="group_item.rate"
+                                                    @keyup="calculation(index)"
+                                                    placeholder="Rate"
+                                                    type="text"
+                                                    autocomplete="off"
+                                                    oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+                                                    class="block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
                                             </td>
 
                                             <td>
@@ -271,7 +293,7 @@ const breadcrumbs = [
 
                                     <tfoot class="bg-white">
                                         <tr>
-                                            <th colspan="4" scope="col" class="py-2 text-right text-lg font-medium font-mono">Total Around</th>
+                                            <th colspan="7" scope="col" class="py-2 text-right text-lg font-medium font-mono">Total Around</th>
                                             <th colspan="1" scope="col" class="py-2 text-center text-lg font-medium font-mono">{{ form.total_format }}</th>
                                         </tr>
                                     </tfoot>

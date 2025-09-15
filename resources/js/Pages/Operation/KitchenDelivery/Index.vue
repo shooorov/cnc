@@ -9,7 +9,9 @@
                         <Breadcrumb :breadcrumbs="breadcrumbs" />
                     </div>
                     <div class="mt-6 h-9 flex space-x-3 md:mt-0 md:ml-4">
-                        <Link :href="route('kitchen_delivery.create')" class="inline-flex items-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-primary-400">
+                        <Link
+                            :href="route('kitchen_delivery.create')"
+                            class="inline-flex items-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-primary-400">
                             <PlusIcon class="-ml-1 mr-2 h-5 w-5 text-gray-400" aria-hidden="true" />
                             Create
                         </Link>
@@ -24,8 +26,7 @@
                     <div class="flex flex-col sm:flex-row sm:justify-between items-center px-4 py-5 border-b border-gray-200 sm:px-8">
                         <p class="max-w-2xl leading-10 text-gray-700 text-lg font-medium mb-4 sm:mb-0">Kitchen Deliveries ({{ form.start_date }} - {{ form.end_date }})</p>
 
-                        <div class="flex-shrink-0 flex space-x-3">
-                        </div>
+                        <div class="flex-shrink-0 flex space-x-3"></div>
                     </div>
 
                     <form @submit.prevent="submit">
@@ -33,37 +34,44 @@
                             <div class="py-2 sm:grid sm:grid-cols-8 sm:gap-4">
                                 <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-1"></dd>
 
-								<dd v-if="form.start_date" class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-									<label class="block text-sm font-medium text-gray-700">Start Date</label>
-									<input v-model="form.start_date" type="date"
-                                        class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded">
-								</dd>
+                                <dd v-if="form.start_date" class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700">Start Date</label>
+                                    <input
+                                        v-model="form.start_date"
+                                        type="date"
+                                        class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
+                                </dd>
 
-								<dd v-if="form.end_date" class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-									<label class="block text-sm font-medium text-gray-700">End Date</label>
-									<input v-model="form.end_date" type="date"
-										class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded">
-								</dd>
+                                <dd v-if="form.end_date" class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700">End Date</label>
+                                    <input
+                                        v-model="form.end_date"
+                                        type="date"
+                                        class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
+                                </dd>
 
-								<dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-									<label class="block text-sm font-medium text-gray-700">Action</label>
-									<div class="inline-flex mt-1 rounded" role="group">
-										<button type="submit"
-											class="inline-flex items-center px-4 py-2 border border-transparent rounded-l shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600">
-											<MagnifyingGlassIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-											Search
-										</button>
+                                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700">Action</label>
+                                    <div class="inline-flex mt-1 rounded" role="group">
+                                        <button
+                                            type="submit"
+                                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-l shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600">
+                                            <MagnifyingGlassIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                                            Search
+                                        </button>
 
-										<button @click="clearFilter" type="reset"
-											class="inline-flex items-center px-4 py-1 border border-primary-600 rounded-r shadow-sm text-sm font-medium text-primary-700 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600">
-											<ArrowPathIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-											Clear
-										</button>
-									</div>
-								</dd>
-							</div>
-						</dl>
-					</form>
+                                        <button
+                                            @click="clearFilter"
+                                            type="reset"
+                                            class="inline-flex items-center px-4 py-1 border border-primary-600 rounded-r shadow-sm text-sm font-medium text-primary-700 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600">
+                                            <ArrowPathIcon class="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                                            Clear
+                                        </button>
+                                    </div>
+                                </dd>
+                            </div>
+                        </dl>
+                    </form>
 
                     <Alert />
 
@@ -78,11 +86,11 @@
                         </thead>
                         <tbody class="bg-white">
                             <tr v-for="(delivery, index) in kitchen_deliveries" :key="delivery.id" :class="[index % 2 == 0 ? 'bg-white' : 'bg-gray-50', 'border-b']">
-                                <td class="p-2 text-center"> {{ Number(index) + 1 }} </td>
+                                <td class="p-2 text-center">{{ Number(index) + 1 }}</td>
 
-                                <td class="px-3 py-1 whitespace-wrap break-words"> {{ delivery.datetime_format }} </td>
+                                <td class="px-3 py-1 whitespace-wrap break-words">{{ delivery.date_format }}</td>
 
-                                <td class="px-3 py-1 whitespace-wrap break-words"> {{ delivery.total ?? 0 }} </td>
+                                <td class="px-3 py-1 whitespace-wrap break-words">{{ delivery.total ?? 0 }}</td>
 
                                 <td class="px-3 py-1 whitespace-wrap break-words">
                                     <div class="flex justify-end">
@@ -110,29 +118,19 @@
 </template>
 
 <script>
-import { reactive } from 'vue';
-import { router, Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3'
+import { reactive } from 'vue'
 
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import StatusOptions from '@/Components/StatusOptions.vue';
-import Breadcrumb from '@/Components/Breadcrumb.vue';
-import Alert from '@/Components/Alert.vue';
+import Alert from '@/Components/Alert.vue'
+import Breadcrumb from '@/Components/Breadcrumb.vue'
+import StatusOptions from '@/Components/StatusOptions.vue'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
-import Status from '@/Components/Status.vue';
+import Status from '@/Components/Status.vue'
 
-import {
-    PlusIcon,
-    MinusIcon,
-} from '@heroicons/vue/24/solid';
+import { MinusIcon, PlusIcon } from '@heroicons/vue/24/solid'
 
-import {
-    ArrowTopRightOnSquareIcon,
-    ArrowPathIcon,
-    MagnifyingGlassIcon,
-    PencilSquareIcon,
-    PrinterIcon,
-    TrashIcon,
-} from '@heroicons/vue/24/outline';
+import { ArrowPathIcon, ArrowTopRightOnSquareIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, TrashIcon } from '@heroicons/vue/24/outline'
 
 export default {
     layout: AuthenticatedLayout,
@@ -141,7 +139,8 @@ export default {
         Alert,
         Breadcrumb,
         Head,
-        Link,Status,
+        Link,
+        Status,
         StatusOptions,
 
         PlusIcon,
@@ -151,63 +150,65 @@ export default {
         ArrowPathIcon,
         MagnifyingGlassIcon,
         PencilSquareIcon,
-        TrashIcon,
+        TrashIcon
     },
 
-    props:{
+    props: {
         filter: Object,
         string_change: Object,
 
-        kitchen_deliveries: Array,
+        kitchen_deliveries: Array
     },
 
     mounted() {
         $('#table').DataTable({
-            lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+            lengthMenu: [
+                [10, 25, 50, 100, 200],
+                [10, 25, 50, 100, 200]
+            ],
             length: 10,
             dom: "<'flex justify-center sm:justify-end mb-3'B><'flex flex-col sm:flex-row justify-between'lf><'block overflow-auto'rt><'flex flex-col sm:flex-row justify-between'ip>",
-            buttons: [
-                'copy', 'excel'
-            ],
-        });
+            buttons: ['copy', 'excel']
+        })
     },
 
     methods: {
-        destroy(route, message = "Are you sure you want to delete?") {
-            if(confirm(message)) { router.delete(route); }
-        },
+        destroy(route, message = 'Are you sure you want to delete?') {
+            if (confirm(message)) {
+                router.delete(route)
+            }
+        }
     },
 
     setup(props) {
         const breadcrumbs = [
             { name: 'Kitchen Deliveries', href: route('kitchen_delivery.index'), current: false },
-            { name: 'List Page', href: '#', current: false },
-        ];
+            { name: 'List Page', href: '#', current: false }
+        ]
 
         const form = reactive({
             end_date: props.filter.end_date,
-            start_date: props.filter.start_date,
+            start_date: props.filter.start_date
         })
 
-		function clearFilter() {
-			for (const [key, value] of Object.entries(form)) {
-				form[key] = '';
-			}
-		}
+        function clearFilter() {
+            for (const [key, value] of Object.entries(form)) {
+                form[key] = ''
+            }
+        }
 
         function submit() {
             router.visit(route('kitchen_delivery.index'), {
-  				data: form,
-			});
+                data: form
+            })
         }
 
         return {
             breadcrumbs,
             form,
-			clearFilter,
+            clearFilter,
             submit
         }
-    },
-
+    }
 }
 </script>
