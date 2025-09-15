@@ -15,9 +15,7 @@ const page = usePage()
 
 const props = defineProps({
     string_change: Object,
-
     date: String,
-
     items: Array,
     requisition_items: Array,
     requisitions: Array,
@@ -30,56 +28,60 @@ const form = useForm({
     central_kitchen_id: null,
     delivery_date: props.date,
     total: null,
-    group_items: props.items.map((item) => {
-        // item.quantity = '';
-        item.show = true
-        item.unit = 'pcs'
-        item.avg_rate = item.rate
-        return item
-    })
+    group_items: props.items.map((item) => ({
+        ...item,
+        show: true,
+        unit: 'pcs',
+        avg_rate: item.rate
+    }))
 })
 
 const submit = () => {
     page.props.alertMessage = {}
-
     form.post(route('kitchen_delivery.store'))
 }
 
 watch(
     () => form.requisition_id,
-    (newVal, oldVal) => {
-        console.log(newVal, this.items)
-        this.form.group_items = this.items.map((item) => {
-            // item.show = (!newVal || item.product_requisition_id == newVal);
-            this.requisition_items[this.form.requisition_id]?.forEach((i) => {
-                if (i.item_id == item.id) {
+    (newVal) => {
+        console.log('Selected requisition:', newVal)
+
+        form.group_items = props.items.map((item) => {
+            props.requisition_items[newVal]?.forEach((i) => {
+                if (i.item_id === item.id) {
                     item.requisition_quantity = i.quantity
                 }
             })
 
-            item.show = true
-            item.unit = 'pcs'
-            item.avg_rate = item.rate
-            return item
+            return {
+                ...item,
+                show: true,
+                unit: 'pcs',
+                avg_rate: item.rate
+            }
         })
     }
 )
 
 const calculation = (index) => {
-    let this_item = this.form.group_items[index]
+    let this_item = form.group_items[index]
 
     this_item.requisition_total = Number(((this_item.avg_rate || 0) * (this_item.requisition_quantity || 0)).toFixed(3))
+
     this_item.delivery_total = Number(((this_item.avg_rate || 0) * (this_item.delivery_quantity || 0)).toFixed(3))
 
-    this.form.total = this.form.group_items.reduce((carry, val) => carry + Number(val.delivery_total || 0), 0)
-    this.form.total_format = this.form.total.toLocaleString('en-US')
-    this.form.requisition_total = this.form.group_items.reduce((carry, val) => carry + Number(val.requisition_total || 0), 0).toLocaleString('en-US')
+    form.total = form.group_items.reduce((carry, val) => carry + Number(val.delivery_total || 0), 0)
+    form.total_format = form.total.toLocaleString('en-US')
+
+    form.requisition_total = form.group_items.reduce((carry, val) => carry + Number(val.requisition_total || 0), 0).toLocaleString('en-US')
 }
+
 const breadcrumbs = [
     { name: 'Kitchen Deliveries', href: route('kitchen_delivery.index'), current: false },
-    { name: 'Create Page', href: '#', current: false }
+    { name: 'Create Page', href: '#', current: true }
 ]
 </script>
+
 <template>
     <Head> <title>Create Kitchen Delivery</title> </Head>
 

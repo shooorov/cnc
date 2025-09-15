@@ -68,22 +68,19 @@ class KitchenDeliveryController extends Controller
     {
         $items = CacheProduct::get();
         $requisitions = CacheProductRequisition::get();
-        $requisition_items = [];
-        foreach ($requisitions as $requisition) {
-            $requisition->name = $requisition->branch->name . ' - '. $requisition->date->format('d/m/Y');
-            $requisition_items[$requisition->id] = $requisition->products;
-        }
+        $requisition_items = $requisitions->mapWithKeys(function ($requisition) {
+            $requisition->name = $requisition->branch->name . ' - ' . $requisition->date->format('d/m/Y');
+            return [$requisition->id => $requisition->products];
+        });
         // dd($requisition_items);
-        $params = [
+
+        return Inertia::render('Operation/KitchenDelivery/Create', [
             'date' => now()->format('Y-m-d'),
             'requisitions' => $requisitions,
             'central_kitchens' => CacheCentralKitchen::get(),
-
             'items' => $items,
             'requisition_items' => $requisition_items,
-        ];
-
-        return Inertia::render('Operation/KitchenDelivery/Create', $params);
+        ]);
     }
 
     /**
