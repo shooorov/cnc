@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Http\Cache\CacheProduct;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
@@ -16,9 +15,9 @@ class KitchenDeliveryItem extends Model
     protected $fillable = [
         'requisition_quantity',
         'delivery_quantity',
+        'rate',
         'avg_rate',
-        'requisition_total',
-        'delivery_total',
+        'total',
         'product_id',
         'kitchen_delivery_id',
     ];
@@ -33,24 +32,35 @@ class KitchenDeliveryItem extends Model
         'item_unit',
     ];
 
+    /**
+     * Relationship with Product.
+     */
     public function item()
     {
         return $this->belongsTo(Product::class, 'product_id');
     }
 
     /**
-     * Get the Image Default.
+     * Relationship with KitchenDelivery.
      */
-    public function itemName(): Attribute
+    public function kitchenDelivery()
     {
-        return Attribute::get(fn() => CacheProduct::find($this->product_id)->name);
+        return $this->belongsTo(KitchenDelivery::class, 'kitchen_delivery_id');
     }
 
     /**
-     * Get the Image Default.
+     * Get the product name from cache or relationship.
+     */
+    public function itemName(): Attribute
+    {
+        return Attribute::get(fn() => $this->item?->name ?? 'N/A');
+    }
+
+    /**
+     * Get the product unit from cache or relationship.
      */
     public function itemUnit(): Attribute
     {
-        return Attribute::get(fn() => CacheProduct::find($this->product_id)->unit);
+        return Attribute::get(fn() => $this->item?->unit ?? 'N/A');
     }
 }

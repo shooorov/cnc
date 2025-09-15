@@ -97,11 +97,16 @@
                                     <thead class="bg-gray-50">
                                         <tr>
                                             <th scope="col" class="py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ string_change.product }}</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requisition Quantity</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Quantity</th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Requisition Quantity">
+                                                Req. Qty
+                                            </th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Qty</th>
                                             <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Rate</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requisition Total</th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Avg. Rate">Avg. Rate</th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Avg. Total">
+                                                Avg. Total
+                                            </th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
                                             <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Total</th>
                                         </tr>
                                     </thead>
@@ -110,7 +115,7 @@
                                         <tr v-for="(group_item, index) in form.group_items" v-show="group_item.show" :key="index">
                                             <td>
                                                 <input
-                                                    v-model="group_item.name"
+                                                    v-model="group_item.item_name"
                                                     readonly
                                                     type="text"
                                                     autocomplete="off"
@@ -157,12 +162,22 @@
 
                                             <td>
                                                 <input
-                                                    v-model="group_item.requisition_total"
+                                                    v-model="group_item.average_total"
                                                     placeholder="Total"
                                                     readonly
                                                     type="text"
                                                     autocomplete="off"
                                                     class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
+                                            </td>
+
+                                            <td>
+                                                <input
+                                                    v-model="group_item.rate"
+                                                    placeholder="Avg Rate"
+                                                    type="text"
+                                                    autocomplete="off"
+                                                    oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+                                                    class="block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
                                             </td>
 
                                             <td>
@@ -209,9 +224,9 @@
     </div>
 </template>
 
-<script>
+<script setup>
 import { Head, Link, router } from '@inertiajs/vue3'
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
 
 import Alert from '@/Components/Alert.vue'
 import Breadcrumb from '@/Components/Breadcrumb.vue'
@@ -220,103 +235,89 @@ import InputError from '@/Components/InputError.vue'
 import Listbox from '@/Components/Listbox.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
-import { MinusIcon, PlusIcon, XMarkIcon } from '@heroicons/vue/24/solid'
-
 import { PencilSquareIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, XMarkIcon } from '@heroicons/vue/24/solid'
 
-export default {
-    layout: AuthenticatedLayout,
+// Use defineOptions to set layout
+defineOptions({ layout: AuthenticatedLayout })
 
-    components: {
-        Alert,
-        Breadcrumb,
-        Combobox,
-        Head,
-        InputError,
-        Link,
-        Listbox,
-        PlusIcon,
-        MinusIcon,
-        PencilSquareIcon,
-        XMarkIcon
-    },
+const props = defineProps({
+    string_change: Object,
+    kitchen_delivery: Object,
+    items: Array,
+    delivery_items: Array,
+    requisitions: Array,
+    central_kitchens: Array
+})
 
-    props: {
-        string_change: Object,
-        date: String,
-        kitchen_delivery: Object,
-        items: Array,
-        delivery_items: Array,
-        requisitions: Array,
-        central_kitchens: Array
-    },
+const breadcrumbs = [
+    { name: 'Kitchen Deliveries', href: route('kitchen_delivery.index'), current: false },
+    { name: 'Edit Page', href: '#', current: true }
+]
 
-    methods: {
-        calculation(index) {
-            let this_item = this.form.group_items[index]
+// Reactive form
+const form = reactive({
+    delivery_date: props.kitchen_delivery.date_format,
+    branch_id: props.kitchen_delivery.branch_id,
+    requisition_id: props.kitchen_delivery.product_requisition_id,
+    central_kitchen_id: props.kitchen_delivery.central_kitchen_id,
+    total: props.kitchen_delivery.total, // raw number for calculations
+    total_format: Number(props.kitchen_delivery.total).toLocaleString('en-IN'), // Bangladeshi/Indian style
+    group_items: props.kitchen_delivery.items.map((item) => ({
+        ...item,
+        show: true,
+        average_total: item.avg_rate * (item.delivery_quantity || 0),
+        delivery_total: item.rate * (item.delivery_quantity || 0),
 
-            this_item.requisition_total = Number(((this_item.avg_rate || 0) * (this_item.requisition_quantity || 0)).toFixed(3))
-            this_item.delivery_total = Number(((this_item.avg_rate || 0) * (this_item.delivery_quantity || 0)).toFixed(3))
+        average_total_format: Number(item.avg_rate * (item.delivery_quantity || 0)).toLocaleString('en-IN'),
+        delivery_total_format: Number(item.rate * (item.delivery_quantity || 0)).toLocaleString('en-IN')
+    }))
+})
 
-            this.form.total = this.form.group_items.reduce((carry, val) => carry + Number(val.delivery_total || 0), 0)
-            this.form.total_format = this.form.total.toLocaleString('en-US')
-            this.form.requisition_total = this.form.group_items.reduce((carry, val) => carry + Number(val.requisition_total || 0), 0).toLocaleString('en-US')
-        }
-    },
-
-    mounted() {
-        this.form.total_format = Number(this.form.total).toLocaleString('en-US')
-    },
-
-    watch: {
-        'form.requisition_id'(newVal, oldVal) {
-            console.log(newVal, this.items)
-            this.form.group_items.map((item) => {
-                let requisition = this.requisitions.find((i) => i.id == this.form.requisition_id)
-                requisition?.items?.forEach((i) => {
-                    if (i.item_id == item.id) {
-                        item.requisition_quantity = i.quantity
-                        item.delivery_quantity = null
-                        item.requisition_total = null
-                        item.delivery_total = null
-                    }
-                })
-
-                item.show = true
-                return item
-            })
-        }
-    },
-
-    setup(props) {
-        const breadcrumbs = [
-            { name: 'Kitchen Deliveries', href: route('kitchen_delivery.index'), current: false },
-            { name: 'Edit Page', href: '#', current: false }
-        ]
-
-        const form = reactive({
-            delivery_date: props.kitchen_delivery.date,
-            branch_id: props.kitchen_delivery.branch_id,
-            requisition_id: props.kitchen_delivery.requisition_id,
-            central_kitchen_id: props.kitchen_delivery.central_kitchen_id,
-
-            total: props.kitchen_delivery.total,
-            group_items: props.kitchen_delivery.items.map((item) => {
-                // item.quantity = '';
-                item.show = true
-                return item
-            })
-        })
-
-        function submit() {
-            router.patch(route('kitchen_delivery.update', props.kitchen_delivery.id), form)
-        }
-
-        return {
-            breadcrumbs,
-            form,
-            submit
-        }
-    }
+// Submit form
+const submit = () => {
+    router.patch(route('kitchen_delivery.update', props.kitchen_delivery.id), form)
 }
+
+// Calculation method
+const calculation = (index) => {
+    const item = form.group_items[index]
+    item.average_total = Number((item.avg_rate * (item.delivery_quantity || 0)).toFixed(3))
+    item.delivery_total = Number((item.rate * (item.delivery_quantity || 0)).toFixed(3))
+    item.average_total_format = Number(item.avg_rate * (item.delivery_quantity || 0)).toLocaleString('en-IN')
+    item.delivery_total_format = Number(item.rate * (item.delivery_quantity || 0)).toLocaleString('en-IN')
+
+    form.total = form.group_items.reduce((carry, val) => carry + Number(val.delivery_total || 0), 0)
+    form.total_format = form.total.toLocaleString('en-US')
+    form.average_total = form.group_items.reduce((carry, val) => carry + Number(val.average_total || 0), 0).toLocaleString('en-US')
+}
+
+// Watch for requisition changes
+watch(
+    () => form.requisition_id,
+    (newVal) => {
+        if (!newVal) return
+
+        const selectedRequisition = props.requisitions.find((r) => r.id == newVal)
+        if (!selectedRequisition) return
+
+        form.group_items = props.delviery_items.map((item) => {
+            const requisitionItem = selectedRequisition.items.find((i) => i.product_id === item.product_id)
+            return {
+                ...item,
+                unit: 'pcs',
+                delivery_quantity: requisitionItem ? requisitionItem.delivery_quantity : 0,
+                requisition_quantity: requisitionItem ? requisitionItem.requisition_quantity : 0,
+                avg_rate: item.avg_rate,
+                rate: item.rate,
+                show: true,
+                average_total: Number((item.avg_rate * (requisitionItem?.quantity || 0)).toFixed(3)),
+                delivery_total: Number((item.avg_rate * (requisitionItem?.delivery_quantity || 0)).toFixed(3)),
+
+                average_total_format: Number(item.avg_rate * (item.delivery_quantity || 0)).toLocaleString('en-IN'),
+                delivery_total_format: Number(item.rate * (item.delivery_quantity || 0)).toLocaleString('en-IN')
+            }
+        })
+    }
+)
 </script>

@@ -19,7 +19,7 @@ class KitchenDeliveryRequest extends FormRequest
             'central_kitchen_id' => ['required', 'exists:central_kitchens,id'],
             'total' => ['required', 'numeric'],
 
-            'group_items.*.item_id' => ['required', 'exists:products,id'],
+            'group_items.*.product_id' => ['required', 'exists:products,id'],
             'group_items.*.delivery_quantity' => ['nullable', 'numeric'],
             'group_items.*.rate' => [
                 'nullable',
