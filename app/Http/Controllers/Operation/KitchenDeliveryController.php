@@ -70,7 +70,8 @@ class KitchenDeliveryController extends Controller
         $requisitions = CacheProductRequisition::get();
         $requisition_items = [];
         foreach ($requisitions as $requisition) {
-            $requisition_items[$requisition->id] = $requisition->items;
+            $requisition->name = $requisition->branch->name . ' - '. $requisition->date->format('d/m/Y');
+            $requisition_items[$requisition->id] = $requisition->products;
         }
         // dd($requisition_items);
         $params = [

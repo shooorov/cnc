@@ -1,17 +1,15 @@
 <script setup>
-import { reactive, ref, watch } from 'vue'
-import { router, Head, Link, usePage, useForm } from '@inertiajs/vue3'
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
+import { watch } from 'vue'
 
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import Breadcrumb from '@/Components/Breadcrumb.vue'
 import Alert from '@/Components/Alert.vue'
+import Breadcrumb from '@/Components/Breadcrumb.vue'
 import Combobox from '@/Components/Combobox.vue'
 import InputError from '@/Components/InputError.vue'
 import Listbox from '@/Components/Listbox.vue'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
-import { PlusIcon, MinusIcon, XMarkIcon } from '@heroicons/vue/24/solid'
-
-import { PencilSquareIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, XMarkIcon } from '@heroicons/vue/24/solid'
 
 const page = usePage()
 
@@ -42,9 +40,9 @@ const form = useForm({
 })
 
 const submit = () => {
-	page.props.alertMessage = {};
+    page.props.alertMessage = {}
 
-	form.post(route('kitchen_delivery.store'))
+    form.post(route('kitchen_delivery.store'))
 }
 
 watch(
@@ -147,16 +145,14 @@ const breadcrumbs = [
                                     </div>
 
                                     <div class="col-span-6 sm:col-span-3">
-                                        <label class="block text-sm font-medium text-gray-700">
-                                            Delivery From Central Kitchen <span class="text-red-500">*</span>
-                                        </label>
+                                        <label class="block text-sm font-medium text-gray-700"> Delivery From Central Kitchen <span class="text-red-500">*</span> </label>
                                         <Combobox class="mt-1" v-model="form.central_kitchen_id" :items="central_kitchens" />
                                         <InputError :message="$page.props.errors.central_kitchen_id" />
                                     </div>
 
                                     <div class="col-span-6 sm:col-span-6">
                                         <label class="block text-sm font-medium text-gray-700">
-                                            {{ string_change.product }} Requisition <span class="text-red-500">*</span>
+                                            {{ string_change.product }} Requisitions <span class="text-red-500">*</span>
                                         </label>
                                         <div class="flex mx-auto">
                                             <Listbox class="" v-model="form.requisition_id" :items="requisitions" />
@@ -188,20 +184,12 @@ const breadcrumbs = [
                                             <th scope="col" class="py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 {{ string_change.product }}
                                             </th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Requisition Quantity
-                                            </th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Delivery Quantity
-                                            </th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requisition Quantity</th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Quantity</th>
                                             <th scope="col" class="w-28 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
                                             <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Rate</th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Requisition Total
-                                            </th>
-                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Delivery Total
-                                            </th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requisition Total</th>
+                                            <th scope="col" class="w-28 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Total</th>
                                         </tr>
                                     </thead>
 

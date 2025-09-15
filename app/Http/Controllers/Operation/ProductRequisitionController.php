@@ -56,6 +56,9 @@ class ProductRequisitionController extends Controller
             $item->description = $item->products->count();
         }
 
+        foreach ($product_requisitions as $item) {
+            $item->date_format = $item->date->format('d/m/Y');
+        }
         $params = [
             'requisitions' => $product_requisitions,
             'filter' => [
@@ -236,13 +239,13 @@ class ProductRequisitionController extends Controller
     public function destroy(ProductRequisition $product_requisition)
     {
         DB::beginTransaction();
-        foreach ($product_requisition->items as $item) {
+        foreach ($product_requisition->products as $item) {
             $item->delete();
         }
         $product_requisition->delete();
         DB::commit();
         CacheProductRequisition::forget();
 
-        return redirect()->route('product_requisition.in')->with('success', __('Requisition removed successfully!'));
+        return redirect()->route('product_requisition.index')->with('success', __('Requisition removed successfully!'));
     }
 }
