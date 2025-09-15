@@ -47,14 +47,17 @@ watch(
         console.log('Selected requisition:', newVal)
 
         form.group_items = props.items.map((item) => {
+            let requisition_quantity = null
+
             props.requisition_items[newVal]?.forEach((i) => {
                 if (i.item_id === item.id) {
-                    item.requisition_quantity = i.quantity
+                    requisition_quantity = i.quantity
                 }
             })
 
             return {
                 ...item,
+                requisition_quantity, // ✅ carry forward into new object
                 show: true,
                 unit: 'pcs',
                 avg_rate: item.rate

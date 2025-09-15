@@ -99,15 +99,13 @@
                                             <th scope="col" class="py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ string_change.product }}</th>
                                             <th scope="col" class="w-1/4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                                             <th scope="col" class="w-20 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                                            <th scope="col" class="w-40 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
-                                            <th scope="col" class="w-40 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                             <th scope="col" class="w-40 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Rate</th>
+                                            <th scope="col" class="w-40 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                         </tr>
                                     </thead>
 
                                     <tbody class="bg-white divide-y divide-gray-200">
                                         <tr v-for="(group_item, index) in form.group_items" v-show="group_item.show" :key="index">
-                                            <!-- Name -->
                                             <td>
                                                 <input
                                                     v-model="group_item.name"
@@ -117,7 +115,6 @@
                                                     class="block w-full px-4 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                             </td>
 
-                                            <!-- Quantity -->
                                             <td>
                                                 <input
                                                     v-model.number="group_item.quantity"
@@ -128,7 +125,6 @@
                                                     class="block w-full px-4 pr-24 focus:ring-primary-400 focus:border-primary-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
                                             </td>
 
-                                            <!-- Unit -->
                                             <td>
                                                 <input
                                                     v-model="group_item.unit"
@@ -138,41 +134,20 @@
                                                     class="block w-full px-4 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                             </td>
 
-                                            <!-- Rate (MANDATORY if quantity > 0) -->
-                                            <td>
-                                                <div>
-                                                    <input
-                                                        v-model.number="group_item.rate"
-                                                        @keyup="calculation(index)"
-                                                        placeholder="Rate"
-                                                        type="text"
-                                                        :required="group_item.quantity > 0"
-                                                        oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
-                                                        :class="[
-                                                            'block w-full px-4 pr-24  focus:bg-transparent sm:text-sm border rounded',
-                                                            group_item.quantity > 0 && (!group_item.rate || group_item.rate <= 0)
-                                                                ? 'border-red-500 focus:ring-red-400 focus:border-red-400'
-                                                                : 'border-gray-300 focus:ring-primary-400 focus:border-primary-400'
-                                                        ]" />
-                                                </div>
-                                            </td>
-
-                                            <!-- Total -->
                                             <td>
                                                 <input
-                                                    v-model="group_item.total"
-                                                    placeholder="Total"
+                                                    v-model="group_item.avg_rate"
+                                                    placeholder="Avg Rate"
                                                     readonly
                                                     type="text"
                                                     autocomplete="off"
                                                     class="block w-full px-4 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                             </td>
 
-                                            <!-- Avg Rate -->
                                             <td>
                                                 <input
-                                                    v-model="group_item.avg_rate"
-                                                    placeholder="Avg Rate"
+                                                    v-model="group_item.total"
+                                                    placeholder="Total"
                                                     readonly
                                                     type="text"
                                                     autocomplete="off"
@@ -257,7 +232,6 @@ const form = useForm({
     total: null,
     total_format: '',
     group_items: props.items.data.map((item) => {
-        item.rate = ''
         item.quantity = ''
         item.total = ''
         item.show = true
@@ -270,7 +244,7 @@ const rateRefs = ref([])
 
 function calculation(index) {
     let this_item = form.group_items[index]
-    this_item.total = Number(((this_item.rate || 0) * (this_item.quantity || 0)).toFixed(3))
+    this_item.total = Number(((this_item.avg_rate || 0) * (this_item.quantity || 0)).toFixed(3))
 
     form.total = form.group_items.reduce((carry, val) => carry + Number(val.total || 0), 0)
     form.total_format = form.total.toLocaleString('en-US')

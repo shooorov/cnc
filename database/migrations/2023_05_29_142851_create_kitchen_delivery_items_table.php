@@ -15,8 +15,9 @@ return new class extends Migration
             $table->id();
             $table->integer('requisition_quantity')->nullable();
             $table->integer('delivery_quantity')->nullable();
-            $table->decimal('avg_rate', 16, 2)->nullable();
+            $table->decimal('rate', 16, 2)->nullable();
             $table->decimal('total', 9, 2)->nullable();
+            $table->decimal('avg_rate', 16, 2)->nullable();
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->foreignId('kitchen_delivery_id')->constrained()->cascadeOnDelete();
             $table->timestamps();

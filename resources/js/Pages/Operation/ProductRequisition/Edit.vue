@@ -4,13 +4,13 @@
     </Head>
 
     <div>
-        <!-- Header -->
         <div class="bg-white shadow">
             <div class="px-4 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
                 <div class="py-6 md:flex md:items-center md:justify-between lg:border-t lg:border-gray-200">
                     <div class="flex-1 min-w-0">
                         <Breadcrumb :breadcrumbs="breadcrumbs" />
                     </div>
+
                     <div class="mt-6 h-9 flex space-x-3 md:mt-0 md:ml-4">
                         <Link
                             :href="route('product_requisition.create')"
@@ -23,12 +23,12 @@
             </div>
         </div>
 
-        <!-- Form -->
         <div class="py-5">
             <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white shadow sm:rounded-lg">
                     <div class="flex flex-col sm:flex-row sm:justify-between items-center px-4 py-5 border-b border-gray-200 sm:px-8">
                         <p class="max-w-2xl leading-10 text-gray-700 text-lg font-medium mb-4 sm:mb-0">{{ string_change.product }} Requisition Edit</p>
+
                         <div class="flex-shrink-0 flex space-x-3">
                             <button
                                 @click="submit"
@@ -43,46 +43,51 @@
 
                     <form @submit.prevent="submit">
                         <dl class="space-y-4 sm:space-y-6 px-5 py-6">
-                            <!-- Requisition Info -->
-                            <div class="max-w-xl mx-auto grid grid-cols-6 gap-6">
-                                <div class="col-span-6 sm:col-span-3">
-                                    <label class="block text-sm font-medium text-gray-700"> Requisition Date <span class="text-red-500">*</span> </label>
-                                    <input
-                                        v-model="form.requisition_date"
-                                        ref="requisitionDateRef"
-                                        type="date"
-                                        class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
-                                    <InputError :message="form.errors?.requisition_date" />
-                                </div>
+                            <div class="max-w-xl mx-auto">
+                                <div class="grid grid-cols-6 gap-6">
+                                    <div class="col-span-6 sm:col-span-3">
+                                        <label class="block text-sm font-medium text-gray-700"> Requisition Date <span class="text-red-500">*</span> </label>
+                                        <input
+                                            v-model="form.requisition_date"
+                                            type="date"
+                                            class="mt-1 block w-full px-4 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
+                                        <InputError :message="$page.props.errors.requisition_date" />
+                                    </div>
 
-                                <div class="col-span-6 sm:col-span-3">
-                                    <label class="block text-sm font-medium text-gray-700"> Total Around <span class="text-red-500">*</span> </label>
-                                    <input
-                                        :value="form.total_format"
-                                        readonly
-                                        type="text"
-                                        placeholder="Total"
-                                        class="mt-1 block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
-                                    <InputError :message="form.errors?.total" />
-                                </div>
+                                    <div class="col-span-6 sm:col-span-3">
+                                        <label class="block text-sm font-medium text-gray-700"> Total Around <span class="text-red-500">*</span> </label>
+                                        <input
+                                            :value="form.total_format"
+                                            type="text"
+                                            placeholder="Total"
+                                            readonly
+                                            class="mt-1 block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
+                                        <InputError :message="$page.props.errors.total" />
+                                    </div>
 
-                                <div class="col-span-6 sm:col-span-3">
-                                    <label class="block text-sm font-medium text-gray-700"> Central Kitchen <span class="text-red-500">*</span> </label>
-                                    <Combobox class="mt-1" v-model="form.central_kitchen_id" :items="central_kitchens" />
-                                    <InputError :message="form.errors?.central_kitchen_id" />
+                                    <div class="col-span-6 sm:col-span-3">
+                                        <label class="block text-sm font-medium text-gray-700"> Central Kitchen <span class="text-red-500">*</span> </label>
+                                        <Combobox class="mt-1" v-model="form.central_kitchen_id" :items="central_kitchens" />
+                                        <InputError :message="$page.props.errors.central_kitchen_id" />
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Products Table -->
-                            <div class="relative max-w-5xl mx-auto space-y-4 sm:space-y-6">
+                            <div class="relative">
+                                <div class="absolute inset-0 flex items-center" aria-hidden="true"><div class="w-full border-t border-gray-300" /></div>
+                                <div class="relative flex justify-center ml-4">
+                                    <span class="px-3 bg-white text-lg font-medium text-gray-900"> {{ string_change.product_s }} </span>
+                                </div>
+                            </div>
+
+                            <div class="max-w-5xl mx-auto space-y-4 sm:space-y-6">
                                 <table class="table-auto sm:table-fixed min-w-full divide-y divide-gray-200">
                                     <thead class="bg-gray-50">
                                         <tr>
-                                            <th scope="col" class="py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                {{ string_change.product }}
-                                            </th>
+                                            <th scope="col" class="py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ string_change.product }}</th>
                                             <th scope="col" class="w-1/4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                                            <th scope="col" class="w-40 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
+                                            <!-- <th scope="col" class="w-20 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th> -->
+                                            <th scope="col" class="w-40 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Rate</th>
                                             <th scope="col" class="w-40 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                         </tr>
                                     </thead>
@@ -104,23 +109,22 @@
                                                     @keyup="calculation(index)"
                                                     placeholder="Quantity"
                                                     type="text"
-                                                    :ref="(el) => (quantityRefs[index] = el)"
                                                     oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
                                                     class="block w-full px-4 pr-24 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
-                                                <InputError :message="form.errors?.group_items?.[index]?.quantity" />
                                             </td>
+
+                                            <!-- <td>
+                                                <input v-model="group_item.product_unit" readonly type="text" autocomplete="off" class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded">
+                                            </td> -->
 
                                             <td>
                                                 <input
-                                                    v-model="group_item.rate"
-                                                    placeholder="Rate"
+                                                    v-model="group_item.avg_rate"
+                                                    placeholder="Avg Rate"
+                                                    readonly
                                                     type="text"
-                                                    :required="group_item.quantity > 0"
-                                                    @keyup="calculation(index)"
-                                                    :ref="(el) => (rateRefs[index] = el)"
-                                                    oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
-                                                    class="block w-full px-4 pr-24 focus:ring-indigo-400 focus:border-indigo-400 hover:bg-gray-100 focus:bg-transparent sm:text-sm border-gray-300 rounded" />
-                                                <InputError :message="form.errors?.group_items?.[index]?.rate" />
+                                                    autocomplete="off"
+                                                    class="block w-full px-4 focus:ring-none focus:ring-0 focus:ring-primary-400 focus:border-primary-400 bg-gray-100 sm:text-sm border-gray-300 rounded" />
                                             </td>
 
                                             <td>
@@ -137,16 +141,18 @@
 
                                     <tfoot class="bg-white">
                                         <tr>
-                                            <td colspan="3" class="py-2 px-2 text-right text-base">Total Around</td>
-                                            <th colspan="1" class="py-2 px-2 text-left text-lg font-medium font-mono">
-                                                {{ form.total_format }}
-                                            </th>
+                                            <td colspan="3" scope="col" class="py-2 px-2 text-right text-base">Total Around</td>
+                                            <th colspan="1" scope="col" class="py-2 px-2 text-left text-lg font-medium font-mono">{{ form.total_format }}</th>
                                         </tr>
                                     </tfoot>
                                 </table>
                             </div>
 
-                            <!-- Submit -->
+                            <div class="relative">
+                                <div class="absolute inset-0 flex items-center" aria-hidden="true"><div class="w-full border-t border-gray-300" /></div>
+                                <div class="relative flex justify-center ml-4"><span class="px-3 bg-white text-lg font-medium text-gray-900"> </span></div>
+                            </div>
+
                             <div class="max-w-5xl mx-auto space-y-4 sm:space-y-6">
                                 <div class="flex justify-start">
                                     <button
@@ -167,7 +173,7 @@
 
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3'
-import { nextTick, reactive, ref } from 'vue'
+import { reactive } from 'vue'
 
 import Alert from '@/Components/Alert.vue'
 import Breadcrumb from '@/Components/Breadcrumb.vue'
@@ -175,9 +181,12 @@ import Combobox from '@/Components/Combobox.vue'
 import InputError from '@/Components/InputError.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
-import { PencilSquareIcon, PlusIcon } from '@heroicons/vue/24/solid'
+import { PencilSquareIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon } from '@heroicons/vue/24/solid'
 
-defineOptions({ layout: AuthenticatedLayout })
+defineOptions({
+    layout: AuthenticatedLayout
+})
 
 const props = defineProps({
     string_change: Object,
@@ -185,58 +194,28 @@ const props = defineProps({
     central_kitchens: Array
 })
 
-// Breadcrumbs
 const breadcrumbs = [
     { name: props.string_change.product + ' Requisitions', href: route('product_requisition.index'), current: false },
     { name: 'Edit Page', href: '#', current: false }
 ]
 
-// Refs for validation focus
-const requisitionDateRef = ref(null)
-const rateRefs = ref([])
-const quantityRefs = ref([])
-
-// Reactive form
 const form = reactive({
     requisition_date: props.requisition.date,
     central_kitchen_id: props.requisition.central_kitchen_id,
     total: props.requisition.total,
     total_format: props.requisition.products.reduce((carry, val) => carry + Number(val.total), 0).toLocaleString('en-US'),
-    group_items: props.requisition.products.map((item) => ({ ...item, rate: item.rate || '' })),
-    errors: {}
+    group_items: props.requisition.products
 })
 
-// Calculation
 function calculation(index) {
-    const item = form.group_items[index]
-    item.total = Number(((item.rate || 0) * (item.quantity || 0)).toFixed(3))
+    let this_item = form.group_items[index]
+
+    this_item.total = Number(((this_item.avg_rate || 0) * (this_item.quantity || 0)).toFixed(3))
     form.total = form.group_items.reduce((carry, val) => carry + Number(val.total || 0), 0)
     form.total_format = form.total.toLocaleString('en-US')
 }
 
-// Submit with validation
-async function submit() {
-    form.errors = {}
-
-    if (!form.requisition_date) {
-        form.errors.requisition_date = 'Requisition date is required'
-        await nextTick()
-        requisitionDateRef.value?.focus()
-        return
-    }
-
-    for (let i = 0; i < form.group_items.length; i++) {
-        const item = form.group_items[i]
-        if (item.quantity && !item.rate) {
-            form.errors.group_items = form.errors.group_items || []
-            form.errors.group_items[i] = { rate: 'Rate is required when quantity is entered' }
-            await nextTick()
-            rateRefs.value[i]?.focus()
-            return
-        }
-    }
-
+function submit() {
     router.patch(route('product_requisition.update', props.requisition.id), form)
 }
 </script>
-``

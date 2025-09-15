@@ -11,15 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('product_requisition_items', function (Blueprint $table) {
-            if (!Schema::hasColumn('product_requisition_items', 'rate')) {
-                $table->decimal('rate', 16, 2)->nullable();
-            }
-        });
-
-        Schema::table('requisition_items', function (Blueprint $table) {
-            if (!Schema::hasColumn('requisition_items', 'rate')) {
-                $table->decimal('rate', 16, 2)->nullable();
+        Schema::table('kitchen_delivery_items', function (Blueprint $table) {
+            if (!Schema::hasColumn('kitchen_delivery_items', 'rate')) {
+                $table->decimal('rate', 16, 2)->nullable()->after('delivery_quantity');
             }
         });
     }
@@ -27,5 +21,12 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down(): void {}
+    public function down(): void
+    {
+        Schema::table('kitchen_delivery_items', function (Blueprint $table) {
+            if (Schema::hasColumn('kitchen_delivery_items', 'rate')) {
+                $table->dropColumn('rate');
+            }
+        });
+    }
 };
