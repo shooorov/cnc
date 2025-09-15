@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->datetime('date');
+            $table->dateTime('date');
             $table->string('check_no')->nullable();
             $table->enum('direction', ['in', 'out'])->default('in');
             $table->decimal('amount', 14, 2)->nullable();

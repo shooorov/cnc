@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('product_requisitions', function (Blueprint $table) {
             $table->id();
-            $table->datetime('date');
+            $table->dateTime('date');
             $table->decimal('total', 10, 2)->nullable();
             $table->foreignId('branch_id')->constrained()->cascadeOnDelete();
             $table->foreignId('central_kitchen_id')->constrained()->cascadeOnDelete();

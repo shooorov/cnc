@@ -14,7 +14,7 @@ return new class extends Migration
         // 1. Create product_inventories table
         Schema::create('product_inventories', function (Blueprint $table) {
             $table->id();
-            $table->datetime('date');
+            $table->dateTime('date');
             $table->string('reference')->nullable();
             $table->string('serial');
             $table->enum('direction', ['in', 'out'])->default('in');

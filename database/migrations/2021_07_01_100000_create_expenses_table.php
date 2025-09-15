@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('expenses', function (Blueprint $table) {
             $table->id();
-            $table->datetime('date');
+            $table->dateTime('date');
             $table->decimal('amount', 16, 2)->nullable();
             $table->string('status')->default('unpaid');
             $table->foreignId('account_id')->constrained()->cascadeOnDelete();

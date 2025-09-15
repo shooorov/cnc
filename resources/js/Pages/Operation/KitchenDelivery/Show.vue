@@ -61,15 +61,19 @@
                                     <th class="w-80 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">{{ string_change.product }}</th>
                                     <th class="w-56 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Quantity</th>
                                     <th class="w-40 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Avg Rate</th>
+                                    <th class="w-40 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Avg Total</th>
+                                    <th class="w-40 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Rate</th>
                                     <th class="w-40 px-8 py-3 text-xs text-left font-medium border-b text-gray-500 uppercase tracking-wider">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="(item, index) in kitchen_delivery.items" :key="index" :class="[index % 2 === 0 ? 'bg-white' : 'bg-primary-50']">
                                     <td class="px-8 py-3 text-sm text-gray-700">{{ item.item_name }}</td>
-                                    <td class="px-8 py-3 text-sm text-gray-700">{{ item.delivery_quantity }} {{ item.unit }}</td>
+                                    <td class="px-8 py-3 text-sm text-gray-700">{{ item.delivery_quantity }}pc</td>
                                     <td class="px-8 py-3 text-sm text-gray-700">{{ item.avg_rate }}</td>
-                                    <td class="px-8 py-3 text-sm text-gray-700">{{ item.delivery_total }}</td>
+                                    <td class="px-8 py-3 text-sm text-gray-700">{{ item.avg_rate * item.delivery_quantity }}</td>
+                                    <td class="px-8 py-3 text-sm text-gray-700">{{ item.rate }}</td>
+                                    <td class="px-8 py-3 text-sm text-gray-700">{{ item.total }}</td>
                                 </tr>
                             </tbody>
                         </table>

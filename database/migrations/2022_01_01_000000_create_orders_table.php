@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->datetime('date');
+            $table->dateTime('date');
             $table->string('number', 191);
             $table->integer('order_count')->nullable();
             $table->string('invoice_number', 191);
