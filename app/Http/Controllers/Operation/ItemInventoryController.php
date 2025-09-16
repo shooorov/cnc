@@ -80,7 +80,7 @@ class ItemInventoryController extends Controller
         $isDateSearch = RolePermission::isEnabled('record_search.inventory_compare_date_search');
 
         if ($isDateSearch) {
-            $end_date = $request->end_date ? now()->parse($request->end_date) : now();
+            $end_date = $request->end_date ? now()->parse($request->end_date)->endOfDay() : now();
             $start_date = $request->start_date ? now()->parse($request->start_date) : now()->startOfMonth();
         } else {
             $end_date = now();
@@ -89,75 +89,89 @@ class ItemInventoryController extends Controller
 
         $direction = 'in';
 
+        // Cache lookups
         $cache_branches = CacheBranch::get();
         $cache_items = CacheItem::get();
-        $cache_item_inventories = CacheItemInventory::get()->where('direction', $direction)->where('date', '>=', $start_date)->where('date', '<=', $end_date);
-        $cache_inventory_items = CacheItemInventoryItem::get()->where('direction', $direction); // direction out contains rate n total null
 
-        $item_inventory_ids = $inventory_items = [];
-        foreach ($cache_item_inventories as $item) {
-            $item_inventory_ids[] = $item->id;
-        }
-        $filtered_inventory_items = $cache_inventory_items->whereIn('item_inventory_id', $item_inventory_ids);
-        foreach ($filtered_inventory_items as $item) {
-            $inventory_items[] = $item;
-        }
+        // Filter inventories (with date + direction)
+        $cache_item_inventories = CacheItemInventory::get()
+            ->where('direction', $direction)
+            ->where('date', '>=', $start_date)
+            ->where('date', '<=', $end_date);
 
-        $items_array = $items_list = [];
-        foreach ($inventory_items as $inv_item) {
-            $inv_item = (object) $inv_item;
-            $item_id = $inv_item->item_id;
-            $branch_id = $cache_item_inventories->first(fn($i) => $i->id == $inv_item->item_inventory_id)->branch_id;
-            $items_array[$item_id][$branch_id][] = $inv_item;
-        }
-        ksort($items_array, 1); // 1 = SORT_NUMERIC
+        // Index inventories by ID for faster lookup
+        $inventoriesById = $cache_item_inventories->keyBy('id');
 
+        // Only include inventory items belonging to filtered inventories
+        $cache_inventory_items = CacheItemInventoryItem::whereIn(
+            $cache_item_inventories->pluck('id'),
+            'item_inventory_id'
+        );
+
+        // Group items by item_id + branch_id
+        $items_array = [];
+        foreach ($cache_inventory_items as $inv_item) {
+            $parent = $inventoriesById->get($inv_item->item_inventory_id);
+
+            if (!$parent) {
+                continue; // skip if no matching parent inventory
+            }
+
+            $branch_id = $parent->branch_id;
+            $item_id   = $inv_item->item_id;
+
+            $items_array[$item_id][$branch_id][] = [
+                'rate'  => $inv_item->rate,
+                'total' => $inv_item->total,
+            ];
+        }
+        ksort($items_array, SORT_NUMERIC);
+
+        // Build final list
+        $items_list = [];
         foreach ($items_array as $item_id => $array) {
             $item = $cache_items->first(fn($i) => $i->id == $item_id);
 
             $branches = [];
             foreach ($cache_branches as $branch) {
                 if (array_key_exists($branch->id, $array)) {
-                    $records = $array[$branch->id];
-                    $rates = array_column($records, 'rate');
+                    $records   = $array[$branch->id];
+                    $rates     = array_column($records, 'rate');
                     $sum_total = array_sum(array_column($records, 'total'));
 
-                    $rates = array_filter($rates);
-                    // direction out will occurs error
-                    if (count($rates) == 0) {
-                        dd($item_id, $branch->id);
+                    $rates = array_filter($rates); // remove null/empty
+                    if (count($rates) === 0) {
+                        $avg_rate = 0;
+                    } else {
+                        $avg_rate = number_format(array_sum($rates) / count($rates), 2, '.', '');
                     }
-                    $avg_rate = array_sum($rates) / count($rates);
-                    $avg_rate = number_format($avg_rate, 2, '.', '');
-                    // $avg_rate = count($rates) ? number_format(array_sum($rates) / count($rates), 2, '.', '') : "Item ID: $item_id";
 
                     $branches[$branch->id] = [
-                        'rates' => implode(', ', $rates),
-                        'avg_rate' => "(avg. $avg_rate)",
-                        'total' => $sum_total,
+                        'rates'    => implode(', ', $rates),
+                        'avg_rate' => $avg_rate ? "(avg. $avg_rate)" : '',
+                        'total'    => $sum_total,
                     ];
                 } else {
                     $branches[$branch->id] = [
-                        'rates' => 'N/A',
+                        'rates'    => 'N/A',
                         'avg_rate' => '',
-                        'total' => 'N/A',
+                        'total'    => 'N/A',
                     ];
                 }
             }
+
             $item->branches = $branches;
-            $items_list[] = $item;
+            $items_list[]   = $item;
         }
-        // dd($items_list);
+
         $params = [
-            'items' => $cache_items,
-            'direction' => $direction,
+            'items'      => $cache_items,
+            'direction'  => $direction,
             'items_list' => $items_list,
-
-            'end_date' => $end_date->format('d/m/Y'),
+            'end_date'   => $end_date->format('d/m/Y'),
             'start_date' => $start_date->format('d/m/Y'),
-
-            'filter' => [
-                'end_date' => $end_date->format('Y-m-d'),
+            'filter'     => [
+                'end_date'   => $end_date->format('Y-m-d'),
                 'start_date' => $start_date->format('Y-m-d'),
             ],
         ];
