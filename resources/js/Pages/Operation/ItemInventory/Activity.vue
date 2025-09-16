@@ -8,30 +8,27 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 defineOptions({ layout: AuthenticatedLayout })
 
 import Combobox from '@/Components/Combobox.vue'
-
+import { ArrowPathIcon, ClipboardDocumentIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/vue/24/outline'
 import { PlusIcon } from '@heroicons/vue/24/solid'
 
-import { ArrowPathIcon, ClipboardDocumentIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/vue/24/outline'
 const page = usePage()
+
 const props = defineProps({
     string_change: Object,
     navigation: Object,
-
     filter: Object,
     direction: String,
-
     end_date: String,
     start_date: String,
-
     items: Array,
     iteration: Array,
-    inventory_items: Array
+    inventory_items: Object
 })
 
 const form = useForm({
-    item_id: props.filter.item_id,
-    end_date: props.filter.end_date,
-    start_date: props.filter.start_date
+    item_id: props.filter.item_id || '',
+    end_date: props.filter.end_date || '',
+    start_date: props.filter.start_date || ''
 })
 
 onMounted(() => {
@@ -46,10 +43,15 @@ onMounted(() => {
     })
 })
 
+let initialized = false
 watch(
     () => form.item_id,
-    () => {
-        submit()
+    (newVal, oldVal) => {
+        if (initialized) {
+            submit()
+        } else {
+            initialized = true
+        }
     }
 )
 
@@ -60,16 +62,21 @@ const destroy = (route, message = 'Are you sure you want to delete?') => {
 }
 
 const clearFilter = () => {
-    for (const [key, value] of Object.entries(form)) {
-        form[key] = ''
+    for (const key in form) {
+        if (Object.hasOwn(form, key)) {
+            form[key] = ''
+        }
     }
 }
 
 const submit = () => {
     router.visit(route('item_inventory.activities'), {
-        data: form
+        data: form.data,
+        method: 'get'
     })
 }
+
+
 const breadcrumbs = [
     { name: props.string_change.item_inventory + ' In', href: route('item_inventory.in'), current: false },
     { name: 'Activities Page', href: '#', current: false }
