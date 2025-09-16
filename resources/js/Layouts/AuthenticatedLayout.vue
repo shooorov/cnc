@@ -1,27 +1,27 @@
 <script setup>
-import { reactive, ref } from 'vue'
 import { Link, useForm, usePage } from '@inertiajs/vue3'
+import { reactive, ref } from 'vue'
 
 import { Dialog, DialogOverlay, Menu, MenuButton, MenuItem, MenuItems, TransitionChild, TransitionRoot } from '@headlessui/vue'
 
 import {
     AdjustmentsVerticalIcon,
-    BriefcaseIcon,
-    BookmarkSquareIcon,
-    CurrencyBangladeshiIcon,
-    NewspaperIcon,
-    CreditCardIcon,
-    CircleStackIcon,
-    PresentationChartBarIcon,
-    HomeIcon,
     Bars3CenterLeftIcon,
-    ShoppingCartIcon,
-    ShoppingBagIcon,
-    TruckIcon,
-    ShieldExclamationIcon,
-    XMarkIcon,
+    BookmarkSquareIcon,
+    BriefcaseIcon,
     ChevronDownIcon,
-    ChevronUpDownIcon
+    ChevronUpDownIcon,
+    CircleStackIcon,
+    CreditCardIcon,
+    CurrencyBangladeshiIcon,
+    HomeIcon,
+    NewspaperIcon,
+    PresentationChartBarIcon,
+    ShieldExclamationIcon,
+    ShoppingBagIcon,
+    ShoppingCartIcon,
+    TruckIcon,
+    XMarkIcon
 } from '@heroicons/vue/24/outline'
 
 const page = usePage()
@@ -34,7 +34,7 @@ const sidebarOpen = ref(false)
 
 const setBranch = (id) => {
     branchForm.branch_id = id
-	page.props.alertMessage = {};
+    page.props.alertMessage = {}
 
     branchForm.post(route('index'), {
         onFinish: () => {}
@@ -64,6 +64,7 @@ function menuIcon(name) {
     return menuIcons[name]
 }
 </script>
+
 <template>
     <div class="relative h-screen flex overflow-hidden bg-gray-100">
         <!-- Static sidebar for mobile -->
@@ -114,19 +115,9 @@ function menuIcon(name) {
                         </Link>
 
                         <nav class="mt-5 flex-1 flex flex-col divide-y divide-primary-800 overflow-y-auto" aria-label="Sidebar">
-                            <div
-                                v-for="(sub_menu, index) in page.props.navigation.menu"
-                                :key="index"
-                                v-show="sub_menu.visible"
-                                :class="{ 'mt-6 pt-6': index > 0 }">
+                            <div v-for="(sub_menu, index) in page.props.navigation.menu" :key="index" v-show="sub_menu.visible" :class="{ 'mt-6 pt-6': index > 0 }">
                                 <div class="px-2 space-y-1">
-                                    <Menu
-                                        as="div"
-                                        v-slot="{ open }"
-                                        class="relative"
-                                        v-for="(heading, key) in sub_menu.items"
-                                        :key="key"
-                                        v-show="heading.visible">
+                                    <Menu as="div" v-slot="{ open }" class="relative" v-for="(heading, key) in sub_menu.items" :key="key" v-show="heading.visible">
                                         <Link
                                             v-if="!heading.items && heading.visible"
                                             :href="route(heading.route_name)"
@@ -135,10 +126,7 @@ function menuIcon(name) {
                                                 'group flex items-center px-2 py-2 text-sm leading-6 font-medium rounded-md'
                                             ]"
                                             aria-current="page">
-                                            <component
-                                                :is="menuIcon(heading.name)"
-                                                class="mr-4 shrink-0 h-6 w-6 text-primary-200"
-                                                aria-hidden="true"></component>
+                                            <component :is="menuIcon(heading.name)" class="mr-4 shrink-0 h-6 w-6 text-primary-200" aria-hidden="true"></component>
                                             {{ page.props.string_change[heading.name] ?? heading.name }}
                                         </Link>
 
@@ -148,10 +136,7 @@ function menuIcon(name) {
                                                     heading.is_open ? 'bg-primary-800 text-white' : 'text-primary-100 hover:text-white hover:bg-primary-600',
                                                     'group flex items-start text-left w-full px-2 py-2 text-sm leading-6 font-medium rounded-md'
                                                 ]">
-                                                <component
-                                                    :is="menuIcon(heading.name)"
-                                                    class="mr-4 shrink-0 h-6 w-6 text-primary-200"
-                                                    aria-hidden="true"></component>
+                                                <component :is="menuIcon(heading.name)" class="mr-4 shrink-0 h-6 w-6 text-primary-200" aria-hidden="true"></component>
                                                 <span class="flex-1">{{ page.props.string_change[heading.name] ?? heading.name }}</span>
                                                 <ChevronDownIcon
                                                     :class="[open || heading.is_open ? 'rotate-0' : 'rotate-90', 'transform shrink-0 ml-1 h-5 w-5']"
@@ -170,9 +155,7 @@ function menuIcon(name) {
                                                         <Link
                                                             :href="route(sub_heading.route_name)"
                                                             :class="[
-                                                                sub_heading.current
-                                                                    ? 'bg-primary-800 text-white'
-                                                                    : 'text-primary-100 hover:text-white hover:bg-primary-600',
+                                                                sub_heading.current ? 'bg-primary-800 text-white' : 'text-primary-100 hover:text-white hover:bg-primary-600',
                                                                 'text-white hover:text-white hover:bg-primary-700  group w-full flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md'
                                                             ]">
                                                             {{ page.props.string_change[sub_heading.name] ?? sub_heading.name }}
@@ -222,21 +205,13 @@ function menuIcon(name) {
                                     <div v-if="heading.items">
                                         <MenuButton
                                             :class="[
-                                                heading.is_open
-                                                    ? 'bg-primary-800 text-white'
-                                                    : 'text-primary-100 hover:text-white hover:bg-primary-600 border-transparent',
+                                                heading.is_open ? 'bg-primary-800 text-white' : 'text-primary-100 hover:text-white hover:bg-primary-600 border-transparent',
                                                 'group flex items-start text-left w-full px-2 py-2 text-sm leading-6 font-medium rounded-md'
                                             ]">
-                                            <component
-                                                :is="menuIcon(heading.name)"
-                                                class="mr-4 shrink-0 h-6 w-6 text-primary-200"
-                                                aria-hidden="true"></component>
+                                            <component :is="menuIcon(heading.name)" class="mr-4 shrink-0 h-6 w-6 text-primary-200" aria-hidden="true"></component>
                                             <span class="flex-1">{{ page.props.string_change[heading.name] ?? heading.name }}</span>
                                             <ChevronDownIcon
-                                                :class="[
-                                                    open || heading.is_open ? 'rotate-0' : 'rotate-90',
-                                                    'transition duration-150 ease-out transform shrink-0 ml-1 h-5 w-5'
-                                                ]"
+                                                :class="[open || heading.is_open ? 'rotate-0' : 'rotate-90', 'transition duration-150 ease-out transform shrink-0 ml-1 h-5 w-5']"
                                                 aria-hidden="true" />
                                         </MenuButton>
 
@@ -252,9 +227,7 @@ function menuIcon(name) {
                                                     <Link
                                                         :href="route(sub_heading.route_name)"
                                                         :class="[
-                                                            sub_heading.current
-                                                                ? 'bg-primary-800 text-white'
-                                                                : 'text-primary-100 hover:text-white hover:bg-primary-600',
+                                                            sub_heading.current ? 'bg-primary-800 text-white' : 'text-primary-100 hover:text-white hover:bg-primary-600',
                                                             'group w-full flex items-center pl-11 pr-2 py-2 text-sm font-medium rounded-md'
                                                         ]">
                                                         {{ sub_heading.name }}
@@ -309,10 +282,7 @@ function menuIcon(name) {
                                                 <button
                                                     type="button"
                                                     @click=";[close, setBranch(null)]"
-                                                    :class="[
-                                                        active || !branchForm.branch_id ? 'bg-gray-100' : '',
-                                                        'block px-4 py-2 text-sm text-gray-700 w-full text-left'
-                                                    ]">
+                                                    :class="[active || !branchForm.branch_id ? 'bg-gray-100' : '', 'block px-4 py-2 text-sm text-gray-700 w-full text-left']">
                                                     All Branch
                                                 </button>
                                             </MenuItem>
@@ -345,10 +315,7 @@ function menuIcon(name) {
                             <div>
                                 <MenuButton
                                     class="max-w-xs bg-white rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 lg:p-2 lg:rounded-md lg:hover:bg-gray-50">
-                                    <img
-                                        class="object-cover h-8 w-8 rounded-full"
-                                        :src="page.props.auth.user?.image_url"
-                                        alt="Image path" />
+                                    <img class="object-cover h-8 w-8 rounded-full" :src="page.props.auth.user?.image_url" alt="Image path" />
                                     <span class="hidden ml-3 text-gray-700 text-sm font-medium lg:block"
                                         ><span class="sr-only">Open user menu for </span>{{ page.props.auth.user?.name }}</span
                                     >
