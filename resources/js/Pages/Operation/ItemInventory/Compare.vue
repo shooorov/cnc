@@ -47,7 +47,7 @@ onMounted(() => {
 watch(
     () => form.item_id,
     () => {
-        this.submit()
+        submit()
     }
 )
 
