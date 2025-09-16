@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Chart;
 use App\Data;
 use App\Helpers;
+use App\Http\Cache\CacheItemCategory;
 use App\Http\Cache\CacheProductCategory;
 use App\Models\Item;
 use App\Models\Order;
@@ -207,7 +208,7 @@ class SummaryController extends Controller
 
         $params = [
             'items' => $items->filter(fn ($i) => $i->quantity > 0)->toArray(),
-            'categories' => CacheProductCategory::get()->whereNull('product_category_id')->values(),
+            'categories' => CacheItemCategory::get()->whereNull('item_category_id')->values(),
 
             'filter' => [
                 'category_id' => $category_id,
@@ -220,56 +221,6 @@ class SummaryController extends Controller
     }
 
     /**
-     * Show the application data.
-     *
-     * @return \Illuminate\Contracts\Support\Renderable
-     */
-    public function hourly2(Request $request)
-    {
-        $isDateSearch = RolePermission::isEnabled('record_search.reporting_hourly_date_search');
-
-        if ($isDateSearch) {
-            $end_date = $request->end_date ? Helpers::dayEndedAt($request->end_date) : Helpers::dayEndedAt();
-            $start_date = $request->start_date ? Helpers::dayStartedAt($request->start_date) : Helpers::dayStartedAt();
-        } else {
-            $end_date = Helpers::dayEndedAt();
-            $start_date = Helpers::dayStartedAt();
-        }
-
-        $records = Order::select(
-            DB::raw('DATE_FORMAT(date, "%h:%00 %p") as duration'),
-            DB::raw('SUM(total) as total'),
-        )
-            ->when($start_date, function ($query, $start_date) {
-                $query->where('date', '>=', $start_date);
-            })
-            ->when($end_date, function ($query, $end_date) {
-                $query->where('date', '<=', $end_date);
-            })
-            ->groupBy('duration')
-            ->get()
-            ->pluck('total', 'duration');
-
-            // var_dump($records);
-            // die();
-
-        $data = Chart::line($records, Helpers::dayStartedAt(), Helpers::dayEndedAt());
-        // var_dump($start_date);
-        // var_dump($end_date);
-        // die(); 
-        Log::info($data);
-
-        $params = [
-            'data' => $data,
-            'filter' => [
-                'end_date' => Helpers::operationDay($end_date),
-                'start_date' => Helpers::operationDay($start_date),
-            ],
-        ];
-
-        return Inertia::render('Reporting/Hourly', $params);
-    }
-     /**
      * Show the application data.
      *
      * @return \Illuminate\Contracts\Support\Renderable
@@ -320,6 +271,58 @@ class SummaryController extends Controller
 
         return Inertia::render('Reporting/Hourly', $params);
     }
+
+    /**
+     * Show the application data.
+     *
+     * @return \Illuminate\Contracts\Support\Renderable
+     */
+    public function hourly2(Request $request)
+    {
+        $isDateSearch = RolePermission::isEnabled('record_search.reporting_hourly_date_search');
+
+        if ($isDateSearch) {
+            $end_date = $request->end_date ? Helpers::dayEndedAt($request->end_date) : Helpers::dayEndedAt();
+            $start_date = $request->start_date ? Helpers::dayStartedAt($request->start_date) : Helpers::dayStartedAt();
+        } else {
+            $end_date = Helpers::dayEndedAt();
+            $start_date = Helpers::dayStartedAt();
+        }
+
+        $records = Order::select(
+            DB::raw('DATE_FORMAT(date, "%h:%00 %p") as duration'),
+            DB::raw('SUM(total) as total'),
+        )
+            ->when($start_date, function ($query, $start_date) {
+                $query->where('date', '>=', $start_date);
+            })
+            ->when($end_date, function ($query, $end_date) {
+                $query->where('date', '<=', $end_date);
+            })
+            ->groupBy('duration')
+            ->get()
+            ->pluck('total', 'duration');
+
+            // var_dump($records);
+            // die();
+
+        $data = Chart::line($records, Helpers::dayStartedAt(), Helpers::dayEndedAt());
+        // var_dump($start_date);
+        // var_dump($end_date);
+        // die();
+        Log::info($data);
+
+        $params = [
+            'data' => $data,
+            'filter' => [
+                'end_date' => Helpers::operationDay($end_date),
+                'start_date' => Helpers::operationDay($start_date),
+            ],
+        ];
+
+        return Inertia::render('Reporting/Hourly', $params);
+    }
+
     // /**
     //  * Show the application data.
     //  *

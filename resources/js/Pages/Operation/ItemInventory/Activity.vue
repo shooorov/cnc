@@ -1,27 +1,16 @@
 <script setup>
-import { reactive, watch, onMounted } from 'vue'
-import { router, Head, Link, useForm, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
+import { onMounted, watch } from 'vue'
 
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import StatusOptions from '@/Components/StatusOptions.vue'
-import Breadcrumb from '@/Components/Breadcrumb.vue'
 import Alert from '@/Components/Alert.vue'
+import Breadcrumb from '@/Components/Breadcrumb.vue'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
 import Combobox from '@/Components/Combobox.vue'
 
-import Status from '@/Components/Status.vue'
+import { PlusIcon } from '@heroicons/vue/24/solid'
 
-import { PlusIcon, MinusIcon } from '@heroicons/vue/24/solid'
-
-import {
-    ArrowPathIcon,
-    MagnifyingGlassIcon,
-    ArrowTopRightOnSquareIcon,
-    ClipboardDocumentIcon,
-    PencilSquareIcon,
-    PrinterIcon,
-    TrashIcon
-} from '@heroicons/vue/24/outline'
+import { ArrowPathIcon, ClipboardDocumentIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/vue/24/outline'
 const page = usePage()
 const props = defineProps({
     string_change: Object,
@@ -85,6 +74,7 @@ const breadcrumbs = [
     { name: 'Activities Page', href: '#', current: false }
 ]
 </script>
+
 <template>
     <Head title="Inventories History" />
 
@@ -112,7 +102,7 @@ const breadcrumbs = [
         </div>
 
         <div class="py-5">
-            <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
+            <div class="max-w-full mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white shadow sm:rounded-lg">
                     <div class="flex flex-col sm:flex-row sm:justify-between items-center px-4 py-5 border-b border-gray-200 sm:px-8">
                         <p class="max-w-2xl leading-10 text-gray-700 text-lg font-medium mb-4 sm:mb-0">
@@ -235,10 +225,10 @@ const breadcrumbs = [
                                         </div>
                                     </td>
                                     <td class="p-2 whitespace-no-wrap">
-                                        <div class="text-sm leading-5 text-gray-700 text-center">{{ inventory_items[branch.id][index].rate }}</div>
+                                        <div class="text-sm leading-5 text-gray-700 text-center">{{ Number(inventory_items[branch.id][index].rate).toLocaleString('en-IN') }}</div>
                                     </td>
                                     <td class="p-2 whitespace-no-wrap">
-                                        <div class="text-sm leading-5 text-gray-700 text-center">{{ inventory_items[branch.id][index].total }}</div>
+                                        <div class="text-sm leading-5 text-gray-700 text-center">{{ Number(inventory_items[branch.id][index].total).toLocaleString('en-IN') }}</div>
                                     </td>
                                 </template>
                             </tr>

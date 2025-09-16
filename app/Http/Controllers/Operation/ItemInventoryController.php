@@ -107,13 +107,13 @@ class ItemInventoryController extends Controller
         foreach ($inventory_items as $inv_item) {
             $inv_item = (object) $inv_item;
             $item_id = $inv_item->item_id;
-            $branch_id = $cache_item_inventories->first(fn ($i) => $i->id == $inv_item->item_inventory_id)->branch_id;
+            $branch_id = $cache_item_inventories->first(fn($i) => $i->id == $inv_item->item_inventory_id)->branch_id;
             $items_array[$item_id][$branch_id][] = $inv_item;
         }
         ksort($items_array, 1); // 1 = SORT_NUMERIC
 
         foreach ($items_array as $item_id => $array) {
-            $item = $cache_items->first(fn ($i) => $i->id == $item_id);
+            $item = $cache_items->first(fn($i) => $i->id == $item_id);
 
             $branches = [];
             foreach ($cache_branches as $branch) {
@@ -172,8 +172,8 @@ class ItemInventoryController extends Controller
      */
     public function activities(Request $request)
     {
-        $end_date = now()->parse($request->end_date ?? now());
-        $start_date = now()->parse($request->start_date ?? now()->subDays(3));
+        $end_date = now()->parse($request->end_date ?? now())->endOfDay();
+        $start_date = now()->parse($request->start_date ?? now()->subDays(3))->startOfDay();
         $item_id = $request->item_id;
         $direction = 'in';
         // dd(
@@ -197,7 +197,7 @@ class ItemInventoryController extends Controller
 
         $items_array = $items_list = [];
         foreach ($inventory_items as $inv_item) {
-            $inventory = $cache_item_inventories->first(fn ($i) => $i->id == $inv_item['item_inventory_id']);
+            $inventory = $cache_item_inventories->first(fn($i) => $i->id == $inv_item['item_inventory_id']);
             $items_array[$inventory->branch_id][] = $inv_item;
         }
 
@@ -252,8 +252,8 @@ class ItemInventoryController extends Controller
      */
     public function in(Request $request)
     {
-        $end_date = now()->parse($request->end_date ?? now());
-        $start_date = now()->parse($request->start_date ?? now()->subDays(2));
+        $end_date = now()->parse($request->end_date ?? now())->endOfDay();
+        $start_date = now()->parse($request->start_date ?? now()->subDays(2))->startOfDay();
         $direction = 'in';
 
         $items = CacheItem::get();
@@ -302,8 +302,8 @@ class ItemInventoryController extends Controller
      */
     public function out(Request $request)
     {
-        $end_date = now()->parse($request->end_date ?? now());
-        $start_date = now()->parse($request->start_date ?? now()->subDays(2));
+        $end_date = now()->parse($request->end_date ?? now())->endOfDay();
+        $start_date = now()->parse($request->start_date ?? now()->subDays(2))->startOfDay();
         $direction = 'out';
 
         $items = CacheItem::get();
@@ -527,11 +527,11 @@ class ItemInventoryController extends Controller
 
         foreach ($request->document_files as $key => $file) {
             if ($file->isValid()) {
-                $folder_path = date('Y/F/').$item_inventory->id;
+                $folder_path = date('Y/F/') . $item_inventory->id;
                 Storage::makeDirectory($folder_path);
 
                 $file_name = $file->getClientOriginalName();
-                $full_path = $folder_path.'/'.$file_name;
+                $full_path = $folder_path . '/' . $file_name;
 
                 $document_path = $file->storeAs('documents', $full_path, 'public');
 

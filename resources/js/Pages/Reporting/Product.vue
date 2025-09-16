@@ -1,15 +1,15 @@
 <script setup>
-import { reactive, onMounted } from 'vue';
-import { router, Head, Link } from '@inertiajs/vue3';
-import {
-	ArrowPathIcon,
-	MagnifyingGlassIcon,
-	PrinterIcon,
-} from '@heroicons/vue/24/outline';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Breadcrumb from '@/Components/Breadcrumb.vue';
 import Alert from '@/Components/Alert.vue';
+import Breadcrumb from '@/Components/Breadcrumb.vue';
 import Combobox from '@/Components/Combobox.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import {
+    ArrowPathIcon,
+    MagnifyingGlassIcon,
+    PrinterIcon,
+} from '@heroicons/vue/24/outline';
+import { Head, router } from '@inertiajs/vue3';
+import { onMounted, reactive } from 'vue';
 
 const props = defineProps({
 	navigation: Object,
@@ -167,15 +167,15 @@ const breadcrumbs = [
 								</td>
 
 								<td class="p-2 whitespace-wrap">
-									<div class="text-sm leading-5 text-gray-700">{{ product.rate }}</div>
+									<div class="text-sm leading-5 text-gray-700 text-center">{{ Number(product.rate).toLocaleString('en-IN') }}</div>
 								</td>
 
 								<td class="px-3 py-1 whitespace-wrap break-words">
-									<div class="text-sm leading-5 text-gray-700">{{ product.product_quantity }}</div>
+									<div class="text-sm leading-5 text-gray-700 text-center">{{ product.product_quantity }}</div>
 								</td>
 
 								<td class="p-2 whitespace-wrap">
-									<div class="text-sm leading-5 text-gray-700">{{ product.product_amount }}</div>
+									<div class="text-sm leading-5 text-gray-700 text-right">{{ Number(product.product_amount).toLocaleString('en-IN') }}</div>
 								</td>
 							</tr>
 						</tbody>

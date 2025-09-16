@@ -29,8 +29,8 @@ class ProductInventoryController extends Controller
      */
     public function in(Request $request)
     {
-        $end_date = now()->parse($request->end_date ?? now());
-        $start_date = now()->parse($request->start_date ?? now()->subDays(2));
+        $end_date = now()->parse($request->end_date ?? now())->endOfDay();
+        $start_date = now()->parse($request->start_date ?? now()->subDays(2))->startOfDay();
         $direction = 'in';
 
         $product_inventories = CacheProductInventory::get()->where('direction', $direction)
@@ -59,8 +59,8 @@ class ProductInventoryController extends Controller
      */
     public function out(Request $request)
     {
-        $end_date = now()->parse($request->end_date ?? now());
-        $start_date = now()->parse($request->start_date ?? now()->subDays(2));
+        $end_date = now()->parse($request->end_date ?? now())->endOfDay();
+        $start_date = now()->parse($request->start_date ?? now()->subDays(2))->startOfDay();
         $direction = 'out';
 
         $product_inventories = CacheProductInventory::get()->where('direction', $direction)
